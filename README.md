@@ -4,12 +4,29 @@ A comprehensive set of developer tools for visualizing and analyzing your Rspack
 
 ## Features
 
-- **Build Overview**: Build duration, module/chunk/asset counts, total output size, and entrypoints at a glance
-- **Module Inspector**: Browse all modules with search, filtering by group (node_modules, styles, scripts, etc.), sorting, and detailed module info panel
-- **Chunk Viewer**: Visualize chunks with size bars, entry/initial badges, and expandable details
-- **Asset Browser**: List all output assets with size visualization and search
-- **Module Graph**: Interactive D3 force-directed graph of module dependencies, color-coded by type
-- **Errors & Warnings**: Organized view of build errors and warnings
+### Analysis
+- **Build Overview**: Build duration, module/chunk/asset/plugin/package counts, total output size, entrypoints, duplicate package warnings
+- **Module Inspector**: Browse all modules with search, group filtering (node_modules, styles, components, etc.), sorting, and detailed side panel with Info/Deps/Code tabs
+- **Module Graph**: Interactive D3 force-directed graph of module dependencies, color-coded by type with zoom/pan/drag
+- **Plugins**: View all registered Rspack plugins with search
+
+### Build Output
+- **Chunk Viewer**: List and Treemap views with entry/initial/dynamic filters, expandable details including origins, parents, and children
+- **Asset Browser**: List, Folder, and Treemap views with size visualization, detail panel showing related chunks and modules
+- **Packages**: Analyze node_modules dependencies with Table/Treemap/Duplicates views, direct/transitive filtering, duplicate package detection
+
+### Diagnostics
+- **Errors & Warnings**: Organized view with Errors/Warnings tabs, open-in-editor support
+
+### Tools
+- **Terminal Host**: Built-in terminal to run commands directly from the DevTools UI
+- **Open in Editor**: Click to open any module or file in your code editor
+- **Open in Finder**: Reveal files in the system file manager
+
+### Cross-cutting
+- **Session Compare**: Select two build sessions to compare metrics side-by-side (duration, bundle size, module count, etc.)
+- **Embedded Mode (Dock)**: Inject DevTools as a floating panel in your application via `</body>` script injection
+- **Real-time Updates**: WebSocket-based RPC with automatic reconnection; build completion notifications push to the UI
 
 ## Quick Start
 
@@ -31,9 +48,9 @@ export default {
   // ... your config
   plugins: [
     new RspackDevToolsPlugin({
-      port: 7821,    // optional, default: 7821
+      port: 7821,       // optional, default: 7821
       host: 'localhost', // optional
-      open: true,    // auto-open browser
+      open: true,        // auto-open browser
     }),
   ],
 }
@@ -49,9 +66,11 @@ After the build completes, the DevTools server starts and prints the URL:
 
 ```
 ⬢ Rspack DevTools
-├─ Local:   http://localhost:7821
-├─ Session: build-1-1773241186361
-└─ Modules: 11  Chunks: 1  Assets: 2
+├─ Local:    http://localhost:7821
+├─ Session:  build-1-1773241186361
+├─ Modules:  11  Chunks: 1  Assets: 2
+├─ Plugins:  3   Packages: 8
+└─ Duration: 178ms
 ```
 
 Open the URL to explore your build.
@@ -61,7 +80,7 @@ Open the URL to explore your build.
 ```
 rs-devtools/
 ├── packages/
-│   ├── core/        # @rspack-devtools/core - Rspack plugin + data collector + server
+│   ├── core/        # @rspack-devtools/core - Rspack plugin + data collector + server + terminal
 │   └── client/      # @rspack-devtools/client - Vue 3 standalone UI (builds into core/client/)
 └── example/         # Demo project
 ```
@@ -69,17 +88,44 @@ rs-devtools/
 ### Core Plugin (`@rspack-devtools/core`)
 
 - **RspackDevToolsPlugin**: Rspack plugin that hooks into `compiler.hooks.done` to collect build stats
-- **DataCollector**: Extracts modules, chunks, assets, entrypoints, errors, and warnings from stats
+- **DataCollector**: Extracts modules, chunks, assets, entrypoints, errors, warnings, plugins, and packages from stats
 - **Server**: HTTP + WebSocket server using h3 + sirv + ws
-- **RPC**: birpc-based RPC layer for real-time client-server communication
+- **RPC**: birpc-based RPC layer for real-time client-server communication (20+ RPC methods)
+- **TerminalHost**: Process spawning and output streaming for built-in terminal
+- **Inject**: Script injection for embedded dock mode
 
 ### Client UI (`@rspack-devtools/client`)
 
-- **Vue 3 + Vue Router** SPA
-- **UnoCSS** for styling
+- **Vue 3 + Vue Router** SPA with 9 pages and session comparison view
+- **UnoCSS** for styling with dark mode support
 - **D3.js** for module graph visualization
-- **Fuse.js** for fuzzy search
+- **Fuse.js** for fuzzy search across modules, plugins, packages, and assets
 - Built output is bundled into `packages/core/client/` for serving by the plugin
+
+## RPC Methods
+
+| Method | Description |
+|--------|-------------|
+| `rspack:list-sessions` | List all build sessions |
+| `rspack:get-session` | Get full session data |
+| `rspack:get-modules` | Get all modules for a session |
+| `rspack:get-module-info` | Get detailed info for a module |
+| `rspack:get-chunks` | Get all chunks |
+| `rspack:get-chunk-info` | Get detailed chunk info |
+| `rspack:get-assets` | Get all assets |
+| `rspack:get-asset-details` | Get asset details with related modules |
+| `rspack:get-entrypoints` | Get entrypoints |
+| `rspack:get-plugins` | Get registered plugins |
+| `rspack:get-packages` | Get analyzed packages from node_modules |
+| `rspack:get-package-details` | Get package details with instances |
+| `rspack:get-module-graph` | Get module dependency graph (nodes + edges) |
+| `rspack:compare-sessions` | Compare two sessions' metrics |
+| `rspack:get-errors` | Get build errors |
+| `rspack:get-warnings` | Get build warnings |
+| `rspack:open-in-editor` | Open file in editor |
+| `rspack:open-in-finder` | Reveal file in finder |
+| `rspack:get-terminals` | List terminal sessions |
+| `rspack:run-terminal` | Run a command in a new terminal |
 
 ## Development
 
@@ -108,16 +154,20 @@ pnpm example:build
 
 ## Comparison with Vite DevTools
 
-This project follows the same architectural patterns as Vite DevTools:
-
 | Feature | Vite DevTools | Rspack DevTools |
 |---------|--------------|-----------------|
 | Plugin system | Vite plugin with `devtools.setup` | Rspack plugin with `compiler.hooks.done` |
 | RPC | birpc over WebSocket | birpc over WebSocket |
-| UI | Nuxt app (embedded/standalone) | Vue 3 SPA (standalone) |
+| UI framework | Vue-based SPA | Vue 3 SPA |
 | Data source | Rolldown build events/logs | Rspack Stats API |
-| Dock system | Multi-panel dock UI | Sidebar navigation |
 | Module graph | D3 visualization | D3 force-directed graph |
+| Dock system | Multi-panel dock UI | Embedded iframe dock + standalone |
+| Plugins page | Plugin list with hooks | Plugin list with search |
+| Packages page | node_modules analysis | Package analysis with duplicate detection |
+| Session compare | Side-by-side comparison | 11-metric comparison view |
+| Terminal | Built-in terminal | Built-in terminal host |
+| Open in editor | Launch editor | Launch editor + finder |
+| Treemap views | Chunks/Assets treemap | Chunks/Assets/Packages treemap |
 
 ## License
 

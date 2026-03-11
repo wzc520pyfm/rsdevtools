@@ -10,6 +10,7 @@ import { getPort } from 'get-port-please'
 import sirv from 'sirv'
 import { WebSocketServer } from 'ws'
 import { createRpcFunctions } from './rpc'
+import { TerminalHost } from './terminal'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -17,6 +18,7 @@ export interface DevToolsServer {
   port: number
   close: () => void
   broadcast: (method: string, args: any[]) => void
+  terminalHost: TerminalHost
 }
 
 export async function startDevToolsServer(
@@ -27,8 +29,27 @@ export async function startDevToolsServer(
   const requestedPort = options.port ?? 7821
   const port = await getPort({ port: requestedPort, host })
 
-  const serverFunctions = createRpcFunctions(collector)
   const wsClients = new Set<ReturnType<typeof createBirpc<ClientFunctions, ServerFunctions>>>()
+  const terminalHost = new TerminalHost()
+
+  const serverFunctions = createRpcFunctions(collector, terminalHost)
+
+  terminalHost.setCallbacks({
+    onOutput: (id, data) => {
+      for (const client of wsClients) {
+        try {
+          ;(client as any)['rspack:terminal-output']?.({ id, data })
+        } catch {}
+      }
+    },
+    onExit: (id, exitCode) => {
+      for (const client of wsClients) {
+        try {
+          ;(client as any)['rspack:terminal-exit']?.({ id, exitCode })
+        } catch {}
+      }
+    },
+  })
 
   const clientDir = options.clientDir ?? path.resolve(__dirname, '../client')
   const serveStatic = sirv(clientDir, { dev: true, single: true })
@@ -60,50 +81,33 @@ export async function startDevToolsServer(
   wss.on('connection', (ws: WsWebSocket, _req: IncomingMessage) => {
     const rpc = createBirpc<ClientFunctions, ServerFunctions>(serverFunctions, {
       post: (data) => {
-        if (ws.readyState === ws.OPEN) {
-          ws.send(data)
-        }
+        if (ws.readyState === ws.OPEN) ws.send(data)
       },
       on: (handler) => {
-        ws.on('message', (data) => {
-          handler(data.toString())
-        })
+        ws.on('message', (data) => handler(data.toString()))
       },
       serialize: JSON.stringify,
       deserialize: JSON.parse,
     })
 
     wsClients.add(rpc)
-
-    ws.on('close', () => {
-      wsClients.delete(rpc)
-    })
-
-    ws.on('error', (err) => {
-      console.error('[Rspack DevTools] WebSocket error:', err.message)
-      wsClients.delete(rpc)
-    })
+    ws.on('close', () => wsClients.delete(rpc))
+    ws.on('error', () => wsClients.delete(rpc))
   })
 
   return new Promise((resolve, reject) => {
     httpServer.listen(port, host, () => {
       resolve({
         port,
-        close: () => {
-          wss.close()
-          httpServer.close()
-        },
+        terminalHost,
+        close: () => { wss.close(); httpServer.close() },
         broadcast: (method: string, args: any[]) => {
           for (const client of wsClients) {
-            try {
-              ;(client as any)[method]?.(...args)
-            }
-            catch {}
+            try { ;(client as any)[method]?.(...args) } catch {}
           }
         },
       })
     })
-
     httpServer.on('error', reject)
   })
 }
