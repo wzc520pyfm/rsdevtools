@@ -1,0 +1,15 @@
+{
+  "name": "rspack-devtools-monorepo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "build:client": "pnpm --filter @rspack-devtools/client build",
+    "build:core": "pnpm --filter @rspack-devtools/core build",
+    "dev:client": "pnpm --filter @rspack-devtools/client dev",
+    "example:build": "pnpm --filter rspack-devtools-example build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
