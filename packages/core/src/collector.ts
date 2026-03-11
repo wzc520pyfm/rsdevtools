@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type {
   AssetData,
   BuildError,
@@ -258,31 +260,41 @@ export class DataCollector {
     return result.sort((a, b) => b.size - a.size)
   }
 
+  private versionCache = new Map<string, string>()
+
   private extractPackageInfo(moduleName: string): { name: string; version: string; path: string } | null {
     const nmIndex = moduleName.lastIndexOf('node_modules/')
     if (nmIndex === -1) return null
 
     const afterNm = moduleName.slice(nmIndex + 'node_modules/'.length)
     let pkgName: string
-    let rest: string
 
     if (afterNm.startsWith('@')) {
       const parts = afterNm.split('/')
       if (parts.length < 2) return null
       pkgName = `${parts[0]}/${parts[1]}`
-      rest = parts.slice(2).join('/')
     } else {
       const parts = afterNm.split('/')
       pkgName = parts[0]
-      rest = parts.slice(1).join('/')
     }
 
     const pkgPath = moduleName.slice(0, nmIndex + 'node_modules/'.length + pkgName.length)
+    const version = this.readPackageVersion(pkgPath)
 
-    return {
-      name: pkgName,
-      version: 'latest',
-      path: pkgPath,
+    return { name: pkgName, version, path: pkgPath }
+  }
+
+  private readPackageVersion(pkgPath: string): string {
+    if (this.versionCache.has(pkgPath)) return this.versionCache.get(pkgPath)!
+    try {
+      const pkgJsonPath = join(this.cwd, pkgPath, 'package.json')
+      const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
+      const version = pkgJson.version ?? 'unknown'
+      this.versionCache.set(pkgPath, version)
+      return version
+    } catch {
+      this.versionCache.set(pkgPath, 'unknown')
+      return 'unknown'
     }
   }
 

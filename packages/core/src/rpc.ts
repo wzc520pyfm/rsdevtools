@@ -166,11 +166,11 @@ export function createRpcFunctions(collector: DataCollector, terminalHost: Termi
     },
 
     'rspack:open-in-editor': async ({ path: filePath, line, column }) => {
-      const { default: launch } = await import('launch-editor' as any).catch(() => ({ default: null }))
-      if (launch) {
+      try {
+        const launch = (await import('launch-editor')).default
         const target = line ? `${filePath}:${line}:${column ?? 1}` : filePath
         launch(target)
-      } else {
+      } catch {
         const { exec } = await import('node:child_process')
         exec(`code "${filePath}"`)
       }

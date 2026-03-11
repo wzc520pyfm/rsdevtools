@@ -1,6 +1,10 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Counter } from './components/Counter'
 import { Header } from './components/Header'
+import { TodoList } from './components/TodoList'
+import { UserCard } from './components/UserCard'
+import { DateDisplay } from './components/DateDisplay'
+import { ThemeToggle } from './components/ThemeToggle'
 
 export function App() {
   return (
@@ -8,8 +12,14 @@ export function App() {
       <Header />
       <main>
         <h1>Rspack DevTools Example</h1>
-        <p>This is a demo application to test Rspack DevTools.</p>
-        <Counter />
+        <p>This demo app showcases various features of Rspack DevTools.</p>
+        <div className="grid">
+          <Counter />
+          <DateDisplay />
+          <ThemeToggle />
+        </div>
+        <UserCard name="Developer" role="Engineer" />
+        <TodoList />
       </main>
     </div>
   )
