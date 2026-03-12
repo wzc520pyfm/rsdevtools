@@ -9,6 +9,7 @@ import { createBirpc } from 'birpc'
 import { getPort } from 'get-port-please'
 import sirv from 'sirv'
 import { WebSocketServer } from 'ws'
+import { getInjectClientScript } from './inject'
 import { createRpcFunctions } from './rpc'
 import { TerminalHost } from './terminal'
 
@@ -55,6 +56,14 @@ export async function startDevToolsServer(
   const serveStatic = sirv(clientDir, { dev: true, single: true })
 
   const httpServer = createServer((req, res) => {
+    if (req.url === '/devtools-inject.js') {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Cache-Control', 'no-cache')
+      res.end(getInjectClientScript(port, host))
+      return
+    }
+
     if (req.url === '/.devtools/.connection.json') {
       res.setHeader('Content-Type', 'application/json')
       res.setHeader('Access-Control-Allow-Origin', '*')

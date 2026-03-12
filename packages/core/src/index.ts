@@ -2,7 +2,7 @@ export { RspackDevToolsPlugin } from './plugin'
 export { DataCollector } from './collector'
 export { startDevToolsServer } from './server'
 export { TerminalHost } from './terminal'
-export { getInjectScript } from './inject'
+export { getInjectClientScript, getInjectScript } from './inject'
 export type {
   AssetData,
   AssetInfo,

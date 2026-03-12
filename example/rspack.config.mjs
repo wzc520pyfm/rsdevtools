@@ -1,3 +1,4 @@
+import { rspack } from '@rspack/core'
 import { RspackDevToolsPlugin } from '@rspack-devtools/core'
 
 /** @type {import('@rspack/cli').Configuration} */
@@ -8,6 +9,10 @@ export default {
   output: {
     filename: '[name].[contenthash:8].js',
     clean: true,
+  },
+  devServer: {
+    port: 3200,
+    historyApiFallback: true,
   },
   module: {
     rules: [
@@ -33,9 +38,10 @@ export default {
     ],
   },
   plugins: [
-    new RspackDevToolsPlugin({
-      open: true,
+    new rspack.HtmlRspackPlugin({
+      template: './index.html',
     }),
+    new RspackDevToolsPlugin(),
   ],
   resolve: {
     extensions: ['.js', '.jsx', '.json'],

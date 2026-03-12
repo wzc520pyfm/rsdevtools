@@ -2,7 +2,6 @@ import type { Compiler } from '@rspack/core'
 import type { RspackDevToolsOptions } from './types'
 import type { DevToolsServer } from './server'
 import { DataCollector } from './collector'
-import { getInjectScript } from './inject'
 import { startDevToolsServer } from './server'
 
 export class RspackDevToolsPlugin {
@@ -64,8 +63,6 @@ export class RspackDevToolsPlugin {
             const { exec } = await import('node:child_process')
             exec(`open ${url}`)
           }
-
-          this.injectIntoDevServer(compiler, server)
         }
         catch (err) {
           console.error('[Rspack DevTools] Failed to start server:', err)
@@ -74,47 +71,5 @@ export class RspackDevToolsPlugin {
 
       server?.broadcast('rspack:build-completed', [{ id: session.id, timestamp: session.timestamp }])
     })
-  }
-
-  private injectIntoDevServer(compiler: Compiler, server: DevToolsServer) {
-    const host = this.options.host ?? 'localhost'
-    const injectScript = getInjectScript(server.port, host)
-
-    try {
-      const devServer = (compiler as any).options?.devServer
-      if (devServer) {
-        const originalSetupMiddlewares = devServer.setupMiddlewares
-        devServer.setupMiddlewares = (middlewares: any[], devSrv: any) => {
-          middlewares = originalSetupMiddlewares
-            ? originalSetupMiddlewares(middlewares, devSrv)
-            : middlewares
-
-          middlewares.unshift({
-            name: 'rspack-devtools-inject',
-            middleware: (req: any, res: any, next: any) => {
-              const originalEnd = res.end.bind(res)
-              const originalWrite = res.write.bind(res)
-              const isHtml = req.headers?.accept?.includes('text/html')
-
-              if (!isHtml) return next()
-
-              let body = ''
-              res.write = (chunk: any) => { body += chunk.toString(); return true }
-              res.end = (chunk: any) => {
-                if (chunk) body += chunk.toString()
-                if (body.includes('</body>')) {
-                  body = body.replace('</body>', `${injectScript}\n</body>`)
-                }
-                originalEnd(body)
-              }
-              next()
-            },
-          })
-
-          return middlewares
-        }
-      }
-    }
-    catch {}
   }
 }
