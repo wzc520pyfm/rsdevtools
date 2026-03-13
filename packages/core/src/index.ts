@@ -1,4 +1,5 @@
 export { RspackDevToolsPlugin } from './plugin'
+export { RspackDevTools } from './factory'
 export { DataCollector } from './collector'
 export { startDevToolsServer } from './server'
 export { TerminalHost } from './terminal'

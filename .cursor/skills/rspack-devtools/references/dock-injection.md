@@ -72,8 +72,9 @@ window.__RSPACK_DEVTOOLS_INJECTED__ = true;
 | Element | ID | Description |
 |---|---|---|
 | Root container | `rspack-devtools-root` | Fixed overlay, `pointer-events: none`, `z-index: 2147483647` |
-| Anchor button | `rspack-devtools-anchor` | 36x36px draggable ⚡ button |
-| Glow ring | (inside anchor) | CSS gradient ring, visible on hover |
+| Anchor | `rspack-devtools-anchor` | Draggable dock with bracket decorations |
+| Dock bar | `rspack-devtools-dock` | Rounded pill with icon entries (vite-devtools style) |
+| Glow | `rspack-devtools-glowing` | Gradient blur effect, visible on hover |
 | Panel | `rspack-devtools-panel` | Resizable container with header |
 | Iframe | (inside panel) | Loads `http://{host}:{port}` |
 
@@ -121,9 +122,10 @@ Key: 'rspack-devtools-dock-state' in localStorage
 | Feature | vite-devtools | rs-devtools |
 |---------|---|---|
 | Injection method | Vite middleware transform | `<script src>` endpoint |
-| Button icon | Vite logo | ⚡ lightning bolt |
-| Positioning | Edge snapping | Edge snapping (same concept) |
+| Visual style | Bracket dock `[ icons ]` with glow | Bracket dock `[ icons ]` with glow (aligned) |
+| Minimized state | VitePlusCore logo | Rspack lightning logo |
+| Positioning | Edge snapping with angle-based detection | Edge snapping with angle-based detection (aligned) |
 | State storage | localStorage | localStorage |
 | Toggle shortcut | Shift+Alt+D | Alt+D |
 | Panel type | iframe | iframe |
-| Framework | Built into devtools-kit client | Standalone vanilla JS |
+| Framework | Vue Web Components | Standalone vanilla JS |

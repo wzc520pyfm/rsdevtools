@@ -20,10 +20,11 @@ rs-devtools/
 │   ├── core/                # @rspack-devtools/core - Rspack plugin + server
 │   │   ├── src/
 │   │   │   ├── plugin.ts    # RspackDevToolsPlugin (compiler.hooks.done)
+│   │   │   ├── factory.ts   # RspackDevTools() function-style factory
 │   │   │   ├── server.ts    # HTTP + WebSocket server (sirv + ws)
 │   │   │   ├── collector.ts # Stats → structured data transformer
 │   │   │   ├── rpc.ts       # Server-side RPC function implementations
-│   │   │   ├── inject.ts    # Dock UI inject script (floating button + panel)
+│   │   │   ├── inject.ts    # Dock UI inject script (bracket dock + panel)
 │   │   │   ├── terminal.ts  # Terminal session host (child_process)
 │   │   │   ├── types.ts     # All interfaces + RPC contracts
 │   │   │   └── index.ts     # Public exports
@@ -36,7 +37,11 @@ rs-devtools/
 │       │   │   └── rpc.ts   # birpc client with reconnection
 │       │   └── pages/       # Route pages (Overview, Modules, Chunks, etc.)
 │       └── vite.config.ts   # Vite build for client UI
-├── example/                 # Playground (React + Rspack)
+├── playground/              # Minimal playground (function-style API)
+│   ├── rspack.config.mjs    # Uses RspackDevTools() function-style API
+│   ├── index.html           # Loads devtools-inject.js from DevTools server
+│   └── src/                 # Simple React app
+├── example/                 # Full example (React + Rspack)
 │   ├── rspack.config.mjs    # Uses RspackDevToolsPlugin + HtmlRspackPlugin
 │   ├── index.html           # Loads devtools-inject.js from DevTools server
 │   └── src/
@@ -126,19 +131,22 @@ stats.toJson({
 
 ## Dock Injection System
 
-The dock UI is a vanilla JS script served from the DevTools server at `/devtools-inject.js`.
+The dock UI is a vanilla JS script served from the DevTools server at `/devtools-inject.js`. Its visual design is aligned with vite-devtools' dock.
 
 **How it works:**
 1. `server.ts` serves `/devtools-inject.js` with CORS headers
 2. `index.html` loads it via `<script src="http://localhost:7821/devtools-inject.js">`
-3. The script creates a floating toggle button (⚡) and a resizable iframe panel
+3. The script creates a floating bracket dock `[ ⚡ 📁 💻 ]` with icon entries and a resizable iframe panel
 4. State (position, size, open/closed) persists in `localStorage`
 5. Alt+D keyboard shortcut toggles the panel
 
-**Key features:**
+**Key features (aligned with vite-devtools):**
+- Bracket decorations `[` `]` framing the dock entries (like vite-devtools)
+- Gradient glow effect on hover (same `linear-gradient(45deg, #61d9ff, #7a23a1, #715ebd)` as vite-devtools)
+- Minimized state showing Rspack logo (like VitePlusCore in vite-devtools)
+- Angle-based edge detection for drag-to-dock positioning
 - Draggable anchor that snaps to screen edges (left/right/top/bottom)
 - Resizable panel with header bar (title, pop-out, close buttons)
-- Gradient glow effect on hover (matches vite-devtools aesthetic)
 - `window.parent !== window` guard to skip injection inside iframes
 
 ## RPC Message Format (birpc)
@@ -153,7 +161,13 @@ All 20 server functions are in `ServerFunctions`. Client functions (`ClientFunct
 
 ## Playground Structure
 
-The playground (`example/`) is a React app with hash-based routing:
+Two playground setups are available:
+
+### `playground/` — Minimal (function-style API)
+Demonstrates the `RspackDevTools()` function-style factory, consistent with vite-devtools' `DevTools()` API. Simple React app with counter and installation example.
+
+### `example/` — Full (class-style API)
+React app with hash-based routing:
 
 | Route | Page | Purpose |
 |-------|------|---------|
@@ -161,7 +175,7 @@ The playground (`example/`) is a React app with hash-based routing:
 | `#/devtools` | DevToolsDemo | RPC connection status, session inspection, activity log |
 | `#/explorer` | FileExplorer | Module browser with search, details, source code |
 
-The playground loads the dock inject script from the DevTools server, providing the same embedded DevTools experience as vite-devtools' floating button.
+Both playgrounds load the dock inject script from the DevTools server, providing the same embedded DevTools experience as vite-devtools' floating dock.
 
 ## Build & Run
 
@@ -172,7 +186,10 @@ pnpm build:core
 # Build client UI
 pnpm build:client
 
-# Run playground (starts rspack dev server + DevTools server)
+# Run playground (minimal, function-style API)
+pnpm playground
+
+# Or run the full example
 cd example && npx rspack serve
 ```
 
@@ -185,3 +202,7 @@ For detailed feature comparison and architecture mapping, see [references/vite-d
 For data collection patterns and Rspack Stats API usage, see [references/data-collection.md](references/data-collection.md).
 
 For dock injection implementation details, see [references/dock-injection.md](references/dock-injection.md).
+
+For the complete RPC function reference, see [references/rpc-reference.md](references/rpc-reference.md).
+
+For common issues and solutions, see [references/troubleshooting.md](references/troubleshooting.md).

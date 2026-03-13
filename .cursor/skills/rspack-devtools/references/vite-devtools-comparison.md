@@ -10,6 +10,7 @@ How rs-devtools maps to vite-devtools concepts for feature parity.
 | `rolldown` module graph | `stats.toJson({ modules, reasons })` | Rspack Stats API replaces direct graph access |
 | Nuxt-based client | Vue 3 + vue-router client | Simpler, no Nuxt dependency |
 | `@vitejs/devtools-kit` context | `DataCollector` + `ServerFunctions` | No kit abstraction; direct implementation |
+| `DevTools()` function factory | `RspackDevTools()` function factory | Both support function-style plugin API |
 | `devtools.setup(ctx)` hook | `RspackDevToolsPlugin.apply(compiler)` | Plugin lifecycle differs fundamentally |
 | `ctx.docks.register()` | Sidebar nav in client UI | No dock registry; pages are vue-router routes |
 | `ctx.rpc.register(defineRpcFunction(...))` | `createBirpc(serverFunctions, ...)` | birpc directly, no defineRpcFunction wrapper |
