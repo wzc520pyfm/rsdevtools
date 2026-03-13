@@ -198,6 +198,24 @@ export interface TerminalSession {
   endTime?: number
 }
 
+// ---- File Explorer ----
+
+export interface FileEntry {
+  path: string
+  size: number
+  ext: string
+}
+
+export interface FileDetail {
+  path: string
+  content: string
+  size: number
+}
+
+export interface FileExplorerInfo {
+  rootDir: string
+}
+
 // ---- RPC Interfaces ----
 
 export interface ServerFunctions {
@@ -221,6 +239,10 @@ export interface ServerFunctions {
   'rspack:open-in-finder': (args: { path: string }) => Promise<void>
   'rspack:get-terminals': () => Promise<TerminalSession[]>
   'rspack:run-terminal': (args: { command: string; cwd?: string; name?: string }) => Promise<string>
+  'rspack:list-files': (args: { targetDir?: string }) => Promise<FileEntry[]>
+  'rspack:read-file': (args: { path: string }) => Promise<FileDetail | null>
+  'rspack:write-file': (args: { path: string; content: string }) => Promise<void>
+  'rspack:get-file-info': () => Promise<FileExplorerInfo>
 }
 
 export interface ClientFunctions {

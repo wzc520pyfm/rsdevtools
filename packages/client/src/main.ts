@@ -32,6 +32,16 @@ const router = createRouter({
         { path: 'terminal', name: 'terminal', component: () => import('./pages/Terminal.vue') },
       ],
     },
+    {
+      path: '/dock/explorer',
+      name: 'dock-explorer',
+      component: () => import('./pages/DockExplorer.vue'),
+    },
+    {
+      path: '/dock/terminal',
+      name: 'dock-terminal',
+      component: () => import('./pages/DockTerminal.vue'),
+    },
   ],
 })
 

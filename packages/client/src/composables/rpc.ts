@@ -22,6 +22,10 @@ export interface ServerFunctions {
   'rspack:open-in-finder': (args: { path: string }) => Promise<void>
   'rspack:get-terminals': () => Promise<any[]>
   'rspack:run-terminal': (args: { command: string; cwd?: string; name?: string }) => Promise<string>
+  'rspack:list-files': (args: { targetDir?: string }) => Promise<any[]>
+  'rspack:read-file': (args: { path: string }) => Promise<any>
+  'rspack:write-file': (args: { path: string; content: string }) => Promise<void>
+  'rspack:get-file-info': () => Promise<any>
 }
 
 export interface ClientFunctions {

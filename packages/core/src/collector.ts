@@ -25,6 +25,10 @@ export class DataCollector {
     this.cwd = cwd
   }
 
+  getCwd(): string {
+    return this.cwd
+  }
+
   collectFromStats(statsJson: any, pluginNames: string[]): BuildSession {
     const sessionId = `build-${++sessionCounter}-${Date.now()}`
     const timestamp = Date.now()

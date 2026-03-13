@@ -1,8 +1,13 @@
 import type { DataCollector } from './collector'
 import type { TerminalHost } from './terminal'
-import type { ServerFunctions, SessionComparison } from './types'
+import type { FileDetail, FileEntry, ServerFunctions, SessionComparison } from './types'
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { extname, join, relative, resolve } from 'node:path'
+import { glob } from 'tinyglobby'
 
 export function createRpcFunctions(collector: DataCollector, terminalHost: TerminalHost): ServerFunctions {
+  const cwd = collector.getCwd()
+
   return {
     'rspack:list-sessions': async () => {
       return Array.from(collector.sessions.values())
@@ -188,8 +193,46 @@ export function createRpcFunctions(collector: DataCollector, terminalHost: Termi
       return terminalHost.list()
     },
 
-    'rspack:run-terminal': async ({ command, cwd, name }) => {
-      return terminalHost.run(command, cwd, name)
+    'rspack:run-terminal': async ({ command, cwd: termCwd, name }) => {
+      return terminalHost.run(command, termCwd, name)
+    },
+
+    'rspack:get-file-info': async () => {
+      return { rootDir: resolve(cwd, 'src') }
+    },
+
+    'rspack:list-files': async ({ targetDir }) => {
+      const rootDir = resolve(cwd, targetDir || 'src')
+      if (!existsSync(rootDir)) return []
+      const files = await glob(['**/*'], { cwd: rootDir, absolute: true, onlyFiles: true, dot: false })
+      return files
+        .sort((a, b) => a.localeCompare(b))
+        .map((absolutePath): FileEntry => {
+          const filePath = relative(rootDir, absolutePath).replace(/\\/g, '/')
+          let size = 0
+          try { size = statSync(absolutePath).size } catch {}
+          return { path: filePath, size, ext: extname(filePath) }
+        })
+    },
+
+    'rspack:read-file': async ({ path: filePath }) => {
+      const rootDir = resolve(cwd, 'src')
+      const absolutePath = resolve(rootDir, filePath)
+      if (!absolutePath.startsWith(rootDir)) return null
+      try {
+        const content = readFileSync(absolutePath, 'utf-8')
+        const size = statSync(absolutePath).size
+        return { path: filePath, content, size } as FileDetail
+      } catch {
+        return null
+      }
+    },
+
+    'rspack:write-file': async ({ path: filePath, content }) => {
+      const rootDir = resolve(cwd, 'src')
+      const absolutePath = resolve(rootDir, filePath)
+      if (!absolutePath.startsWith(rootDir)) throw new Error('Path traversal not allowed')
+      writeFileSync(absolutePath, content, 'utf-8')
     },
   }
 }
