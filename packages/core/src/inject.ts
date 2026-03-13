@@ -22,7 +22,7 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
   };
 
   var defaults = {
-    position: 'bottom', width: 45, height: 55, left: 50, top: 50,
+    position: 'left', width: 45, height: 55, left: 50, top: 50,
     open: false, selectedDock: null, anchorOffset: 50,
     inactiveTimeout: 4000,
   };
