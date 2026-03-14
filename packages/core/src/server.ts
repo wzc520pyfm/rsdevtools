@@ -1,7 +1,7 @@
-import type { IncomingMessage } from 'node:http'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { WebSocket as WsWebSocket } from 'ws'
-import type { DataCollector } from './collector'
-import type { ClientFunctions, ConnectionMeta, RspackDevToolsOptions, ServerFunctions } from './types'
+import type { DevToolsNodeContext } from '@rspack-devtools/kit'
+import type { ConnectionMeta, RspackDevToolsOptions } from './types'
 import { createServer } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,8 +10,8 @@ import { getPort } from 'get-port-please'
 import sirv from 'sirv'
 import { WebSocketServer } from 'ws'
 import { getInjectClientScript } from './inject'
-import { createRpcFunctions } from './rpc'
-import { TerminalHost } from './terminal'
+import { RpcFunctionsHost } from './hosts/rpc-host'
+import { DevToolsViewHost } from './hosts/view-host'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -19,52 +19,56 @@ export interface DevToolsServer {
   port: number
   close: () => void
   broadcast: (method: string, args: any[]) => void
-  terminalHost: TerminalHost
 }
 
 export async function startDevToolsServer(
-  collector: DataCollector,
+  context: DevToolsNodeContext,
   options: RspackDevToolsOptions = {},
 ): Promise<DevToolsServer> {
   const host = options.host ?? 'localhost'
   const requestedPort = options.port ?? 7821
   const port = await getPort({ port: requestedPort, host })
 
-  const wsClients = new Set<ReturnType<typeof createBirpc<ClientFunctions, ServerFunctions>>>()
-  const terminalHost = new TerminalHost()
+  const rpcHost = context.rpc as RpcFunctionsHost
+  const viewHost = context.views as DevToolsViewHost
 
-  const serverFunctions = createRpcFunctions(collector, terminalHost)
+  const resolvedHandlers = await rpcHost.resolveAllHandlers()
 
-  terminalHost.setCallbacks({
-    onOutput: (id, data) => {
-      for (const client of wsClients) {
-        try {
-          ;(client as any)['rspack:terminal-output']?.({ id, data })
-        } catch {}
+  const wsClients = new Set<any>()
+
+  rpcHost._setBroadcast(async (broadcastOptions) => {
+    for (const client of wsClients) {
+      try {
+        ;(client as any)[broadcastOptions.method]?.(...broadcastOptions.args)
       }
-    },
-    onExit: (id, exitCode) => {
-      for (const client of wsClients) {
-        try {
-          ;(client as any)['rspack:terminal-exit']?.({ id, exitCode })
-        } catch {}
-      }
-    },
+      catch {}
+    }
   })
 
   const clientDir = options.clientDir ?? path.resolve(__dirname, '../client')
   const serveStatic = sirv(clientDir, { dev: true, single: true })
 
-  const httpServer = createServer((req, res) => {
-    if (req.url === '/devtools-inject.js') {
+  const pluginStaticHandlers: Array<{ baseUrl: string; handler: ReturnType<typeof sirv> }> = []
+  for (const dir of viewHost.staticDirs) {
+    pluginStaticHandlers.push({
+      baseUrl: dir.baseUrl,
+      handler: sirv(dir.distDir, { dev: true, single: true }),
+    })
+  }
+
+  const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+    const url = req.url ?? '/'
+
+    if (url === '/devtools-inject.js') {
+      const currentDocks = context.docks.values({ includeBuiltin: false }) as any[]
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
       res.setHeader('Access-Control-Allow-Origin', '*')
       res.setHeader('Cache-Control', 'no-cache')
-      res.end(getInjectClientScript(port, host))
+      res.end(getInjectClientScript(port, host, currentDocks))
       return
     }
 
-    if (req.url === '/.devtools/.connection.json') {
+    if (url === '/.devtools/.connection.json') {
       res.setHeader('Content-Type', 'application/json')
       res.setHeader('Access-Control-Allow-Origin', '*')
       const meta: ConnectionMeta = { backend: 'websocket', websocket: port }
@@ -72,11 +76,34 @@ export async function startDevToolsServer(
       return
     }
 
-    if (req.url === '/.devtools/api/health') {
+    if (url === '/.devtools/api/health') {
       res.setHeader('Content-Type', 'application/json')
       res.setHeader('Access-Control-Allow-Origin', '*')
-      res.end(JSON.stringify({ status: 'ok', sessions: collector.sessions.size }))
+      res.end(JSON.stringify({ status: 'ok' }))
       return
+    }
+
+    if (url === '/.devtools/api/docks') {
+      res.setHeader('Content-Type', 'application/json')
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      const entries = context.docks.values({ includeBuiltin: false })
+      res.end(JSON.stringify(entries))
+      return
+    }
+
+    for (const pluginHandler of pluginStaticHandlers) {
+      if (url.startsWith(pluginHandler.baseUrl)) {
+        const originalUrl = req.url
+        req.url = url.slice(pluginHandler.baseUrl.length) || '/'
+        pluginHandler.handler(req, res, () => {
+          req.url = originalUrl
+          serveStatic(req, res, () => {
+            res.statusCode = 404
+            res.end('Not found')
+          })
+        })
+        return
+      }
     }
 
     serveStatic(req, res, () => {
@@ -87,17 +114,20 @@ export async function startDevToolsServer(
 
   const wss = new WebSocketServer({ server: httpServer })
 
-  wss.on('connection', (ws: WsWebSocket, _req: IncomingMessage) => {
-    const rpc = createBirpc<ClientFunctions, ServerFunctions>(serverFunctions, {
-      post: (data) => {
-        if (ws.readyState === ws.OPEN) ws.send(data)
+  wss.on('connection', (ws: WsWebSocket) => {
+    const rpc = createBirpc<Record<string, any>, Record<string, any>>(
+      resolvedHandlers,
+      {
+        post: (data) => {
+          if (ws.readyState === ws.OPEN) ws.send(data)
+        },
+        on: (handler) => {
+          ws.on('message', (data) => handler(data.toString()))
+        },
+        serialize: JSON.stringify,
+        deserialize: JSON.parse,
       },
-      on: (handler) => {
-        ws.on('message', (data) => handler(data.toString()))
-      },
-      serialize: JSON.stringify,
-      deserialize: JSON.parse,
-    })
+    )
 
     wsClients.add(rpc)
     ws.on('close', () => wsClients.delete(rpc))
@@ -108,11 +138,16 @@ export async function startDevToolsServer(
     httpServer.listen(port, host, () => {
       resolve({
         port,
-        terminalHost,
-        close: () => { wss.close(); httpServer.close() },
+        close: () => {
+          wss.close()
+          httpServer.close()
+        },
         broadcast: (method: string, args: any[]) => {
           for (const client of wsClients) {
-            try { ;(client as any)[method]?.(...args) } catch {}
+            try {
+              ;(client as any)[method]?.(...args)
+            }
+            catch {}
           }
         },
       })

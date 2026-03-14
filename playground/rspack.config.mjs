@@ -11,7 +11,7 @@ export default {
     clean: true,
   },
   devServer: {
-    port: 3300,
+    port: 9300,
     historyApiFallback: true,
   },
   module: {
@@ -41,7 +41,7 @@ export default {
     new rspack.HtmlRspackPlugin({
       template: './index.html',
     }),
-    RspackDevTools(),
+    RspackDevTools({ port: 7821 }),
   ],
   resolve: {
     extensions: ['.js', '.jsx', '.json'],

@@ -5,5 +5,5 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   clean: true,
-  external: ['@rspack/core'],
+  external: ['@rspack/core', '@rspack-devtools/kit'],
 })

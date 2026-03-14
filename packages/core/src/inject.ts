@@ -1,5 +1,34 @@
-export function getInjectClientScript(port: number, host: string = 'localhost'): string {
+import type { DevToolsDockUserEntry } from '@rspack-devtools/kit'
+
+interface SerializedDock {
+  id: string
+  title: string
+  icon: string
+  type: string
+  url?: string
+}
+
+function serializeDocks(docks: DevToolsDockUserEntry[]): SerializedDock[] {
+  return docks.map((dock) => {
+    const icon = typeof dock.icon === 'string' ? dock.icon : dock.icon.light
+    return {
+      id: dock.id,
+      title: dock.title,
+      icon,
+      type: dock.type,
+      url: 'url' in dock ? dock.url : undefined,
+    }
+  })
+}
+
+export function getInjectClientScript(
+  port: number,
+  host: string = 'localhost',
+  dockEntries: DevToolsDockUserEntry[] = [],
+): string {
   const devtoolsUrl = `http://${host}:${port}`
+  const serializedDocks = JSON.stringify(serializeDocks(dockEntries as DevToolsDockUserEntry[]))
+
   return `(function() {
   if (typeof window === 'undefined') return;
   if (window.__RSPACK_DEVTOOLS_INJECTED__) return;
@@ -8,18 +37,17 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
 
   var DEVTOOLS_URL = '${devtoolsUrl}';
   var STORAGE_KEY = 'rspack-devtools-dock-state';
+  var REGISTERED_DOCKS = ${serializedDocks};
 
-  var DOCKS = [
-    { id: 'build', title: 'Build Analysis', icon: 'bolt' },
-    { id: 'explorer', title: 'File Explorer', icon: 'folder' },
-    { id: 'terminal', title: 'Terminal', icon: 'terminal' },
-  ];
+  var DOCKS = REGISTERED_DOCKS.map(function(d) {
+    return { id: d.id, title: d.title, icon: d.icon, type: d.type, url: d.url || DEVTOOLS_URL };
+  });
 
-  var DOCK_URLS = {
-    build: DEVTOOLS_URL,
-    explorer: DEVTOOLS_URL + '/dock/explorer',
-    terminal: DEVTOOLS_URL + '/dock/terminal',
-  };
+  if (DOCKS.length === 0) {
+    DOCKS = [
+      { id: 'rspack-build', title: 'Build Analysis', icon: 'ph:lightning-duotone', type: 'iframe', url: DEVTOOLS_URL },
+    ];
+  }
 
   var defaults = {
     position: 'left', width: 45, height: 55, left: 50, top: 50,
@@ -31,11 +59,31 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
   catch(e) { store = Object.assign({}, defaults); }
   function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); } catch(e) {} }
 
-  // ===== SVG Icons =====
+  // ===== Iconify-based SVG icon rendering =====
+  var iconCache = {};
+  function renderIcon(iconName, size) {
+    size = size || 20;
+
+    // Built-in SVG icons for common cases
+    var builtins = {
+      'ph:lightning-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor"/></svg>',
+      'ph:folder-open-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" fill="currentColor" opacity="0.85"/></svg>',
+      'ph:terminal-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="2" fill="currentColor" opacity="0.15"/><path d="M6 16l4-4-4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 16h6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>',
+      'ph:chart-bar-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" fill="currentColor" opacity="0.6"/><rect x="10" y="7" width="4" height="14" rx="1" fill="currentColor" opacity="0.8"/><rect x="17" y="3" width="4" height="18" rx="1" fill="currentColor"/></svg>',
+      'ph:puzzle-piece-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M20 8h-3V5a2 2 0 00-2-2H9a2 2 0 00-2 2v3H4a2 2 0 00-2 2v6a2 2 0 002 2h3v3a2 2 0 002 2h6a2 2 0 002-2v-3h3a2 2 0 002-2v-6a2 2 0 00-2-2z" fill="currentColor" opacity="0.7"/></svg>',
+      'ph:cursor-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 7-6 2-2 6z" fill="currentColor" opacity="0.7"/></svg>',
+      'ph:code-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      'ph:house-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M3 12l9-8 9 8v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8z" fill="currentColor" opacity="0.7"/></svg>',
+      'ph:rocket-launch-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M12 2c2 4 2 8 0 12s-4 6-8 8c4-2 8-2 12 0-2-4-2-8 0-12s4-6 8-8c-4 2-8 2-12 0z" fill="currentColor" opacity="0.6"/></svg>',
+    };
+
+    if (builtins[iconName]) return builtins[iconName];
+
+    // Fallback: generic icon placeholder
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" opacity="0.5"/></svg>';
+  }
+
   function makeSVG(type) {
-    if (type === 'bolt') return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor"/></svg>';
-    if (type === 'folder') return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" fill="currentColor" opacity="0.85"/></svg>';
-    if (type === 'terminal') return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="2" fill="currentColor" opacity="0.15"/><path d="M6 16l4-4-4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 16h6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>';
     if (type === 'popout') return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
     if (type === 'close') return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     if (type === 'rspack-logo') return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="rgl" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#rgl)"/></svg>';
@@ -49,22 +97,18 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
   root.id = 'rspack-devtools-root';
   root.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;inset:0;font-family:system-ui,-apple-system,sans-serif;font-size:15px;';
 
-  // ===== Glow effect (vite-devtools: 160px, 1000ms ease-out, blur-60px) =====
   var glow = document.createElement('div');
   glow.id = 'rspack-devtools-glowing';
   glow.style.cssText = 'position:absolute;left:0;top:0;width:160px;height:160px;opacity:0;transition:all 1000ms ease-out;pointer-events:none;z-index:-1;border-radius:50%;filter:blur(60px);background-image:linear-gradient(45deg,#61d9ff,#7a23a1,#715ebd);transform:translate(-50%,-50%);';
 
-  // ===== Anchor (w:0 fixed, like vite-devtools) =====
   var anchor = document.createElement('div');
   anchor.id = 'rspack-devtools-anchor';
   anchor.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:auto;user-select:none;width:0;transform-origin:center;transform:translate(-50%,-50%);';
 
-  // ===== Dock container (absolute, translate centered) =====
   var dockContainer = document.createElement('div');
   dockContainer.id = 'rspack-devtools-dock-container';
   dockContainer.style.cssText = 'position:absolute;left:0;top:0;height:40px;min-width:100px;width:max-content;display:flex;transform:translate(-50%,-50%);transition:all 500ms cubic-bezier(0.34,1.56,0.64,1);';
 
-  // ===== Dock bar (pill shape, glassmorphism, smooth transition) =====
   var dockBar = document.createElement('div');
   dockBar.id = 'rspack-devtools-dock';
   dockBar.style.cssText = [
@@ -76,24 +120,20 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
     'width:calc-size(max-content,size);',
   ].join('');
 
-  // ===== Bracket Left =====
   var bracketL = document.createElement('span');
   bracketL.className = 'rspack-devtools-dock-bracket';
   bracketL.style.cssText = 'position:absolute;left:-4px;top:50%;transform:translateY(-50%);width:10px;color:white;opacity:0.75;transition:opacity 300ms,width 500ms;display:flex;align-items:center;';
   bracketL.innerHTML = makeSVG('bracket-left');
 
-  // ===== Bracket Right =====
   var bracketR = document.createElement('span');
   bracketR.className = 'rspack-devtools-dock-bracket';
   bracketR.style.cssText = 'position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:10px;color:white;opacity:0.75;transition:opacity 300ms,width 500ms;display:flex;align-items:center;';
   bracketR.innerHTML = makeSVG('bracket-right');
 
-  // ===== Mini logo (shown when minimized, centered, crossfade with entries) =====
   var miniLogo = document.createElement('div');
   miniLogo.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;opacity:0;transition:opacity 300ms;pointer-events:none;display:flex;align-items:center;justify-content:center;';
   miniLogo.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="rgl2" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#rgl2)"/></svg>';
 
-  // ===== Dock entries container =====
   var dockEntries = document.createElement('div');
   dockEntries.style.cssText = 'display:flex;align-items:center;width:100%;height:100%;justify-content:center;padding:0 12px;gap:0;transition:opacity 300ms;overflow:hidden;';
 
@@ -108,7 +148,7 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
       'color:rgba(255,255,255,0.5);cursor:pointer;border-radius:12px;',
       'transition:all 300ms cubic-bezier(0.34,1.56,0.64,1);padding:0;position:relative;',
     ].join('');
-    btn.innerHTML = makeSVG(dock.icon);
+    btn.innerHTML = renderIcon(dock.icon);
 
     btn.onmouseenter = function() {
       if (store.selectedDock !== dock.id || !store.open) {
@@ -193,7 +233,8 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
   var headerActions = document.createElement('div');
   headerActions.style.cssText = 'display:flex;gap:2px;';
   headerActions.appendChild(mkHeaderBtn('Open in new window', makeSVG('popout'), function() {
-    var url = DOCK_URLS[store.selectedDock] || DEVTOOLS_URL;
+    var dock = DOCKS.find(function(d) { return d.id === store.selectedDock; });
+    var url = dock ? dock.url : DEVTOOLS_URL;
     window.open(url, 'rspack-devtools', 'width=1200,height=800');
     closePanel();
   }));
@@ -214,7 +255,7 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
   root.appendChild(panel);
   document.body.appendChild(root);
 
-  // ===== Minimization (smooth: scale transform + opacity crossfade) =====
+  // ===== Minimization =====
   var isMinimized = false;
   var inactiveTimer = null;
   var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -228,10 +269,8 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
     dockEntries.style.opacity = '0';
     dockEntries.style.pointerEvents = 'none';
     miniLogo.style.opacity = '1';
-    bracketL.style.width = '6px';
-    bracketL.style.opacity = '0.5';
-    bracketR.style.width = '6px';
-    bracketR.style.opacity = '0.5';
+    bracketL.style.width = '6px'; bracketL.style.opacity = '0.5';
+    bracketR.style.width = '6px'; bracketR.style.opacity = '0.5';
   }
 
   function expand() {
@@ -243,10 +282,8 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
     dockEntries.style.opacity = '1';
     dockEntries.style.pointerEvents = 'auto';
     miniLogo.style.opacity = '0';
-    bracketL.style.width = '10px';
-    bracketL.style.opacity = '0.75';
-    bracketR.style.width = '10px';
-    bracketR.style.opacity = '0.75';
+    bracketL.style.width = '10px'; bracketL.style.opacity = '0.75';
+    bracketR.style.width = '10px'; bracketR.style.opacity = '0.75';
     resetInactiveTimer();
   }
 
@@ -261,72 +298,46 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
   anchor.onmouseleave = function() { glow.style.opacity = '0'; resetInactiveTimer(); };
   anchor.onmousemove = function() { if (!isMinimized) resetInactiveTimer(); };
 
-  // ===== Position (vite-devtools style: anchor at edge, panel floats nearby) =====
   function isVertical() { return store.position === 'left' || store.position === 'right'; }
 
   function positionAnchor() {
     var p = store.position, m = 2;
     anchor.style.left = 'auto'; anchor.style.right = 'auto';
     anchor.style.top = 'auto'; anchor.style.bottom = 'auto';
-
-    if (isVertical()) {
-      dockContainer.style.transform = 'translate(-50%,-50%) rotate(90deg)';
-    } else {
-      dockContainer.style.transform = 'translate(-50%,-50%)';
-    }
-
+    dockContainer.style.transform = isVertical()
+      ? 'translate(-50%,-50%) rotate(90deg)'
+      : 'translate(-50%,-50%)';
     var halfH = 20;
     var off = store.anchorOffset;
-    if (p === 'left') {
-      anchor.style.left = (m + halfH) + 'px';
-      anchor.style.top = off + '%';
-    } else if (p === 'right') {
-      anchor.style.left = (window.innerWidth - m - halfH) + 'px';
-      anchor.style.top = off + '%';
-    } else if (p === 'top') {
-      anchor.style.left = off + '%';
-      anchor.style.top = (m + halfH) + 'px';
-    } else {
-      anchor.style.left = off + '%';
-      anchor.style.top = (window.innerHeight - m - halfH) + 'px';
-    }
+    if (p === 'left') { anchor.style.left = (m + halfH) + 'px'; anchor.style.top = off + '%'; }
+    else if (p === 'right') { anchor.style.left = (window.innerWidth - m - halfH) + 'px'; anchor.style.top = off + '%'; }
+    else if (p === 'top') { anchor.style.left = off + '%'; anchor.style.top = (m + halfH) + 'px'; }
+    else { anchor.style.left = off + '%'; anchor.style.top = (window.innerHeight - m - halfH) + 'px'; }
   }
 
   function positionPanel() {
-    var p = store.position, w = store.width, h = store.height;
-    var m = 4;
-
+    var p = store.position, w = store.width, h = store.height, m = 4;
     panel.style.left = 'auto'; panel.style.right = 'auto';
     panel.style.top = 'auto'; panel.style.bottom = 'auto';
-
     if (p === 'left') {
-      panel.style.left = m + 'px';
-      panel.style.top = m + 'px';
-      panel.style.width = w + 'vw';
-      panel.style.height = 'calc(100vh - ' + (m*2) + 'px)';
+      panel.style.left = m + 'px'; panel.style.top = m + 'px';
+      panel.style.width = w + 'vw'; panel.style.height = 'calc(100vh - ' + (m*2) + 'px)';
       iframe.style.height = 'calc(100vh - ' + (m*2 + 36) + 'px)';
     } else if (p === 'right') {
-      panel.style.right = m + 'px';
-      panel.style.top = m + 'px';
-      panel.style.width = w + 'vw';
-      panel.style.height = 'calc(100vh - ' + (m*2) + 'px)';
+      panel.style.right = m + 'px'; panel.style.top = m + 'px';
+      panel.style.width = w + 'vw'; panel.style.height = 'calc(100vh - ' + (m*2) + 'px)';
       iframe.style.height = 'calc(100vh - ' + (m*2 + 36) + 'px)';
     } else if (p === 'bottom') {
-      panel.style.left = m + 'px';
-      panel.style.bottom = m + 'px';
-      panel.style.width = 'calc(100vw - ' + (m*2) + 'px)';
-      panel.style.height = h + 'vh';
+      panel.style.left = m + 'px'; panel.style.bottom = m + 'px';
+      panel.style.width = 'calc(100vw - ' + (m*2) + 'px)'; panel.style.height = h + 'vh';
       iframe.style.height = 'calc(' + h + 'vh - 36px)';
     } else {
-      panel.style.left = m + 'px';
-      panel.style.top = m + 'px';
-      panel.style.width = 'calc(100vw - ' + (m*2) + 'px)';
-      panel.style.height = h + 'vh';
+      panel.style.left = m + 'px'; panel.style.top = m + 'px';
+      panel.style.width = 'calc(100vw - ' + (m*2) + 'px)'; panel.style.height = h + 'vh';
       iframe.style.height = 'calc(' + h + 'vh - 36px)';
     }
   }
 
-  // ===== Dock selection =====
   function updateDockButtons() {
     dockButtons.forEach(function(item) {
       var isSelected = store.selectedDock === item.dock.id && store.open;
@@ -337,27 +348,20 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
   }
 
   function toggleDock(dockId) {
-    if (store.open && store.selectedDock === dockId) {
-      closePanel();
-    } else {
-      store.selectedDock = dockId;
-      openPanel(dockId);
-    }
+    if (store.open && store.selectedDock === dockId) { closePanel(); }
+    else { store.selectedDock = dockId; openPanel(dockId); }
   }
 
   function openPanel(dockId) {
-    var url = DOCK_URLS[dockId];
+    var dock = DOCKS.find(function(d) { return d.id === dockId; });
+    var url = dock ? dock.url : DEVTOOLS_URL;
     if (!url) return;
     store.open = true;
     store.selectedDock = dockId;
     save();
     positionPanel();
     panel.style.display = 'block';
-    requestAnimationFrame(function() {
-      panel.style.opacity = '1';
-      panel.style.transform = 'none';
-    });
-    var dock = DOCKS.find(function(d) { return d.id === dockId; });
+    requestAnimationFrame(function() { panel.style.opacity = '1'; panel.style.transform = 'none'; });
     panelTitle.textContent = dock ? dock.title : 'Rspack DevTools';
     if (iframe.src !== url) iframe.src = url;
     updateDockButtons();
@@ -368,16 +372,13 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
     store.open = false;
     save();
     panel.style.opacity = '0';
-    setTimeout(function() {
-      if (!store.open) panel.style.display = 'none';
-    }, 200);
+    setTimeout(function() { if (!store.open) panel.style.display = 'none'; }, 200);
     updateDockButtons();
     resetInactiveTimer();
   }
 
   // ===== Drag anchor =====
   var isDragging = false, wasDragging = false, dragStartX, dragStartY;
-
   anchor.onpointerdown = function(e) {
     if (e.button !== 0) return;
     isDragging = true; wasDragging = false;
@@ -389,9 +390,7 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
     if (!isDragging) return;
     if (Math.abs(e.clientX - dragStartX) > 4 || Math.abs(e.clientY - dragStartY) > 4) wasDragging = true;
     if (!wasDragging) return;
-
     dockContainer.style.transition = 'none';
-
     var cx = e.clientX, cy = e.clientY;
     var W = window.innerWidth, H = window.innerHeight;
     var centerX = W / 2, centerY = H / 2;
@@ -401,18 +400,14 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
     var TR = Math.atan2(-centerY + MARGIN, W - centerX);
     var BL = Math.atan2(H - MARGIN - centerY, -centerX);
     var BR = Math.atan2(H - MARGIN - centerY, W - centerX);
-
     store.position = deg >= TL && deg <= TR ? 'top'
       : deg >= TR && deg <= BR ? 'right'
       : deg >= BR && deg <= BL ? 'bottom' : 'left';
-
     var pct = store.position === 'left' || store.position === 'right'
       ? Math.max(10, Math.min(90, (cy / H) * 100))
       : Math.max(10, Math.min(90, (cx / W) * 100));
-
     if (Math.abs(pct - 50) < 2) pct = 50;
     store.anchorOffset = pct;
-
     positionAnchor();
     if (store.open) positionPanel();
     save();
@@ -427,12 +422,11 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
   document.addEventListener('keydown', function(e) {
     if (e.altKey && e.key === 'd') {
       if (store.open) closePanel();
-      else toggleDock(store.selectedDock || 'build');
+      else toggleDock(store.selectedDock || DOCKS[0].id);
       e.preventDefault();
     }
   });
 
-  // ===== Window resize =====
   window.addEventListener('resize', function() { positionAnchor(); if (store.open) positionPanel(); });
 
   // ===== Init =====
@@ -443,6 +437,6 @@ export function getInjectClientScript(port: number, host: string = 'localhost'):
 })();`
 }
 
-export function getInjectScript(port: number, host: string = 'localhost'): string {
-  return `<script>${getInjectClientScript(port, host)}</script>`
+export function getInjectScript(port: number, host: string = 'localhost', dockEntries: DevToolsDockUserEntry[] = []): string {
+  return `<script>${getInjectClientScript(port, host, dockEntries)}</script>`
 }

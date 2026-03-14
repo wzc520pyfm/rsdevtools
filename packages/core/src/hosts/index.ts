@@ -1,0 +1,5 @@
+export { DevToolsDockHost } from './dock-host'
+export { RpcFunctionsHost } from './rpc-host'
+export { DevToolsViewHost } from './view-host'
+export { DevToolsLogsHost } from './logs-host'
+export { DevToolsTerminalHost } from './terminal-host'

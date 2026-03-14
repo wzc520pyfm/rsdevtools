@@ -1,0 +1,42 @@
+export { defineRpcFunction } from './utils/define'
+export { createEventEmitter } from './utils/events'
+
+export type {
+  DevToolsNodeContext,
+  DevToolsPluginOptions,
+  DevToolsCapabilities,
+  ConnectionMeta,
+  DevToolsDockHost,
+  DevToolsDockEntry,
+  DevToolsDockUserEntry,
+  DevToolsDockEntryBase,
+  DevToolsDockEntryCategory,
+  DevToolsDockEntryIcon,
+  DevToolsDockEntriesGrouped,
+  DevToolsViewIframe,
+  DevToolsViewAction,
+  DevToolsViewCustomRender,
+  DevToolsViewLauncher,
+  DevToolsViewLauncherStatus,
+  DevToolsViewBuiltin,
+  ClientScriptEntry,
+  RpcFunctionsHost,
+  RpcFunctionDefinition,
+  RpcBroadcastOptions,
+  RpcSharedStateHost,
+  SharedState,
+  DevToolsRpcServerFunctions,
+  DevToolsRpcClientFunctions,
+  DevToolsRpcSharedStates,
+  DevToolsLogsHost,
+  DevToolsLogEntry,
+  DevToolsLogEntryInput,
+  DevToolsLogHandle,
+  DevToolsViewHost,
+  DevToolsTerminalHost,
+  TerminalSession,
+  EventEmitter,
+  RspackPluginWithDevTools,
+} from './types'
+
+import './types/rspack-augment'

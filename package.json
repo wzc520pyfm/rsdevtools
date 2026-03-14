@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
+    "build:kit": "pnpm --filter @rspack-devtools/kit build",
     "build:client": "pnpm --filter @rspack-devtools/client build",
     "build:core": "pnpm --filter @rspack-devtools/core build",
     "dev:client": "pnpm --filter @rspack-devtools/client dev",

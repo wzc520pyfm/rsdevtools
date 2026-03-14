@@ -1,7 +1,10 @@
 import type { Compiler } from '@rspack/core'
+import type { DevToolsNodeContext } from '@rspack-devtools/kit'
 import type { RspackDevToolsOptions } from './types'
 import type { DevToolsServer } from './server'
 import { DataCollector } from './collector'
+import { createDevToolsContext } from './context'
+import { setupBuiltinBuildAnalysis } from './builtin-plugin'
 import { startDevToolsServer } from './server'
 
 export class RspackDevToolsPlugin {
@@ -15,6 +18,7 @@ export class RspackDevToolsPlugin {
 
   apply(compiler: Compiler) {
     let server: DevToolsServer | null = null
+    let context: DevToolsNodeContext | null = null
 
     this.collector.setCwd(compiler.options.context ?? process.cwd())
 
@@ -47,8 +51,19 @@ export class RspackDevToolsPlugin {
 
       if (!server) {
         try {
-          server = await startDevToolsServer(this.collector, this.options)
+          context = await createDevToolsContext({
+            cwd: compiler.options.context ?? process.cwd(),
+            plugins: compiler.options.plugins ?? [],
+            collector: this.collector,
+            options: this.options,
+          })
+
+          server = await startDevToolsServer(context, this.options)
           const url = `http://${this.options.host ?? 'localhost'}:${server.port}`
+
+          if (this.options.builtinDevTools !== false) {
+            setupBuiltinBuildAnalysis(context, url)
+          }
 
           console.log()
           console.log(`  \x1B[36m\x1B[1m⬢ Rspack DevTools\x1B[0m`)
@@ -56,6 +71,7 @@ export class RspackDevToolsPlugin {
           console.log(`  \x1B[2m├─\x1B[0m Session:  \x1B[33m${session.id}\x1B[0m`)
           console.log(`  \x1B[2m├─\x1B[0m Modules:  \x1B[32m${session.modules.length}\x1B[0m  Chunks: \x1B[32m${session.chunks.length}\x1B[0m  Assets: \x1B[32m${session.assets.length}\x1B[0m`)
           console.log(`  \x1B[2m├─\x1B[0m Plugins:  \x1B[32m${session.plugins.length}\x1B[0m  Packages: \x1B[32m${session.packages.length}\x1B[0m`)
+          console.log(`  \x1B[2m├─\x1B[0m Docks:    \x1B[32m${context.docks.values({ includeBuiltin: false }).length}\x1B[0m registered`)
           console.log(`  \x1B[2m└─\x1B[0m Duration: \x1B[32m${session.duration}ms\x1B[0m`)
           console.log()
 

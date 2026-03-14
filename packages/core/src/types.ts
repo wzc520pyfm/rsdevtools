@@ -182,6 +182,12 @@ export interface RspackDevToolsOptions {
   host?: string
   open?: boolean
   clientDir?: string
+  /**
+   * Whether to register built-in DevTools panels (Build Analysis, File Explorer, Terminal).
+   * Set to `false` if you only want third-party plugin docks.
+   * @default true
+   */
+  builtinDevTools?: boolean
 }
 
 // ---- Terminal ----
