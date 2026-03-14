@@ -166,6 +166,9 @@ export function getInjectClientScript(
       }
       hideTooltip();
     };
+    btn.onpointerdown = function(e) {
+      e.stopPropagation();
+    };
     btn.onclick = function(e) {
       e.stopPropagation();
       toggleDock(dock.id);
@@ -223,7 +226,9 @@ export function getInjectClientScript(
 
   function mkHeaderBtn(title, svg, onclick) {
     var b = document.createElement('button');
-    b.title = title; b.innerHTML = svg; b.onclick = onclick;
+    b.title = title; b.innerHTML = svg;
+    b.onpointerdown = function(e) { e.stopPropagation(); };
+    b.onclick = onclick;
     b.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:4px;display:flex;align-items:center;border-radius:6px;transition:all 200ms;width:24px;height:24px;justify-content:center;';
     b.onmouseenter = function(){ b.style.color='rgba(255,255,255,0.8)'; b.style.background='rgba(136,136,136,0.1)'; };
     b.onmouseleave = function(){ b.style.color='rgba(255,255,255,0.3)'; b.style.background='none'; };
