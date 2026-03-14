@@ -17,25 +17,46 @@ Build analysis and visualization DevTools for Rspack, architecturally inspired b
 ```
 rs-devtools/
 ├── packages/
+│   ├── kit/                 # @rspack-devtools/kit - Shared types & utilities
+│   │   ├── src/
+│   │   │   ├── index.ts     # Public exports (types, utils, constants)
+│   │   │   ├── constants.ts # RPC names, shared state keys, defaults
+│   │   │   ├── client/      # Browser-side API (getDevToolsRpcClient, etc.)
+│   │   │   ├── types/       # All type definitions
+│   │   │   └── utils/       # defineRpcFunction, createEventEmitter, nanoid
+│   │   └── package.json
 │   ├── core/                # @rspack-devtools/core - Rspack plugin + server
 │   │   ├── src/
 │   │   │   ├── plugin.ts    # RspackDevToolsPlugin (compiler.hooks.done)
 │   │   │   ├── factory.ts   # RspackDevTools() function-style factory
-│   │   │   ├── server.ts    # HTTP + WebSocket server (sirv + ws)
+│   │   │   ├── server.ts    # HTTP + WebSocket server (sirv + ws + client-imports)
 │   │   │   ├── collector.ts # Stats → structured data transformer
-│   │   │   ├── rpc.ts       # Server-side RPC function implementations
-│   │   │   ├── inject.ts    # Dock UI inject script (bracket dock + panel)
-│   │   │   ├── terminal.ts  # Terminal session host (child_process)
-│   │   │   ├── types.ts     # All interfaces + RPC contracts
+│   │   │   ├── context.ts   # DevToolsNodeContext creation + host wiring
+│   │   │   ├── builtin-rpc.ts  # All builtin RPC functions (data + logs + inspect)
+│   │   │   ├── builtin-plugin.ts # Built-in dock entries (build, explorer, terminal)
+│   │   │   ├── inject.ts    # Dock UI inject script (all entry types + toast)
+│   │   │   ├── hosts/
+│   │   │   │   ├── dock-host.ts     # Dock registry with builtin entries
+│   │   │   │   ├── rpc-host.ts      # RPC function host + shared state
+│   │   │   │   ├── logs-host.ts     # Log entries with incremental sync
+│   │   │   │   ├── terminal-host.ts # Terminal session management
+│   │   │   │   └── view-host.ts     # Static file hosting for plugins
+│   │   │   ├── types.ts     # Server-specific interfaces
 │   │   │   └── index.ts     # Public exports
 │   │   └── tsup.config.ts   # Build config (ESM, es2022)
 │   └── client/              # @rspack-devtools/client - Vue 3 UI
 │       ├── src/
-│       │   ├── main.ts      # Vue app + vue-router setup
+│       │   ├── main.ts      # Vue app + vue-router setup (all routes)
 │       │   ├── App.vue      # Root component with WebSocket status
 │       │   ├── composables/
-│       │   │   └── rpc.ts   # birpc client with reconnection
-│       │   └── pages/       # Route pages (Overview, Modules, Chunks, etc.)
+│       │   │   └── rpc.ts   # birpc client with reconnection + log listeners
+│       │   └── pages/       # Route pages
+│       │       ├── Sessions.vue, Overview.vue, Modules.vue, ...
+│       │       ├── DockTerminal.vue   # Builtin: Terminal
+│       │       ├── DockExplorer.vue   # Builtin: File Explorer
+│       │       ├── DockLogs.vue       # Builtin: Logs & Notifications
+│       │       ├── DockSettings.vue   # Builtin: Settings
+│       │       └── DockSelfInspect.vue # Builtin: Self Inspect
 │       └── vite.config.ts   # Vite build for client UI
 ├── playground/              # Minimal playground (function-style API)
 │   ├── rspack.config.mjs    # Uses RspackDevTools() function-style API
@@ -131,22 +152,30 @@ stats.toJson({
 
 ## Dock Injection System
 
-The dock UI is a vanilla JS script served from the DevTools server at `/devtools-inject.js`. Its visual design is aligned with vite-devtools' dock.
+The dock UI is a vanilla JS script served from the DevTools server at `/devtools-inject.js`. Its design is aligned with vite-devtools' dock and supports all entry types.
 
 **How it works:**
 1. `server.ts` serves `/devtools-inject.js` with CORS headers
 2. `index.html` loads it via `<script src="http://localhost:7821/devtools-inject.js">`
-3. The script creates a floating bracket dock `[ ⚡ 📁 💻 ]` with icon entries and a resizable iframe panel
+3. The script creates a floating bracket dock with icon entries for all dock types
 4. State (position, size, open/closed) persists in `localStorage`
 5. Alt+D keyboard shortcut toggles the panel
 
-**Key features (aligned with vite-devtools):**
-- Bracket decorations `[` `]` framing the dock entries (like vite-devtools)
-- Gradient glow effect on hover (same `linear-gradient(45deg, #61d9ff, #7a23a1, #715ebd)` as vite-devtools)
-- Minimized state showing Rspack logo (like VitePlusCore in vite-devtools)
-- Angle-based edge detection for drag-to-dock positioning
-- Draggable anchor that snaps to screen edges (left/right/top/bottom)
-- Resizable panel with header bar (title, pop-out, close buttons)
+**Supported dock entry types (aligned with vite-devtools):**
+- **iframe** — Load URL in iframe panel (existing + clientScript support)
+- **action** — Load client script from `/.devtools/client-imports.js` and execute
+- **custom-render** — Load renderer script, mount DOM in panel
+- **launcher** — Show launcher UI with button, status, and on-launch RPC
+- **~builtin** — Core entries: `~logs`, `~settings`, `~popup`, `~self-inspect`
+- **~popup** — Open standalone mode in new window
+
+**Built-in features:**
+- Toast overlay (bottom-right) for log notifications via WebSocket
+- Builtin panels: Logs & Notifications, Settings, Self Inspect
+- Bracket decorations `[` `]` framing dock entries
+- Gradient glow effect on hover
+- Minimized state showing Rspack logo
+- Drag-to-dock positioning (snap to edges)
 - `window.parent !== window` guard to skip injection inside iframes
 
 ## RPC Message Format (birpc)

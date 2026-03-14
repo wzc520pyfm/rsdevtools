@@ -65,6 +65,18 @@ export async function createDevToolsContext(
     initialValue: [] as any[],
   })
 
+  const _defaultSettings = {
+    docksHidden: [] as string[],
+    docksCategoriesHidden: [] as string[],
+    docksPinned: [] as string[],
+    docksCustomOrder: [] as string[],
+    showIframeAddressBar: false,
+    closeOnOutsideClick: false,
+  }
+  await rpcHost.sharedState.get('devtoolskit:internal:user-settings', {
+    initialValue: _defaultSettings,
+  })
+
   docksHost.events.on('dock:entry:updated', () => {
     docksSharedState.mutate(() => context.docks.values())
   })
@@ -102,6 +114,13 @@ export async function createDevToolsContext(
       method: 'devtoolskit:internal:logs:updated',
       args: [],
     })
+  })
+  logsHost.events.on('log:cleared', () => {
+    rpcHost.broadcast({
+      method: 'devtoolskit:internal:logs:updated',
+      args: [],
+    })
+    docksSharedState.mutate(() => context.docks.values())
   })
 
   // Discover and setup plugins with devtools

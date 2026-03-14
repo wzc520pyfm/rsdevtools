@@ -6,18 +6,35 @@ interface SerializedDock {
   icon: string
   type: string
   url?: string
+  category?: string
+  launcher?: { title: string; description?: string; buttonStart?: string; buttonLoading?: string; status?: string }
+  action?: { importFrom: string; importName?: string }
+  renderer?: { importFrom: string; importName?: string }
 }
 
 function serializeDocks(docks: DevToolsDockUserEntry[]): SerializedDock[] {
   return docks.map((dock) => {
     const icon = typeof dock.icon === 'string' ? dock.icon : dock.icon.light
-    return {
+    const base: SerializedDock = {
       id: dock.id,
       title: dock.title,
       icon,
       type: dock.type,
-      url: 'url' in dock ? dock.url : undefined,
+      category: dock.category,
     }
+    if (dock.type === 'iframe') base.url = dock.url
+    if (dock.type === 'launcher') {
+      base.launcher = {
+        title: dock.launcher.title,
+        description: dock.launcher.description,
+        buttonStart: dock.launcher.buttonStart ?? 'Launch',
+        buttonLoading: dock.launcher.buttonLoading ?? 'Loading...',
+        status: dock.launcher.status,
+      }
+    }
+    if (dock.type === 'action') base.action = { importFrom: dock.action.importFrom, importName: dock.action.importName }
+    if (dock.type === 'custom-render') base.renderer = { importFrom: dock.renderer.importFrom, importName: dock.renderer.importName }
+    return base
   })
 }
 
@@ -27,7 +44,7 @@ export function getInjectClientScript(
   dockEntries: DevToolsDockUserEntry[] = [],
 ): string {
   const devtoolsUrl = `http://${host}:${port}`
-  const serializedDocks = JSON.stringify(serializeDocks(dockEntries as DevToolsDockUserEntry[]))
+  const serializedDocks = JSON.stringify(serializeDocks(dockEntries))
 
   return `(function() {
   if (typeof window === 'undefined') return;
@@ -36,18 +53,32 @@ export function getInjectClientScript(
   window.__RSPACK_DEVTOOLS_INJECTED__ = true;
 
   var DEVTOOLS_URL = '${devtoolsUrl}';
+  var WS_PORT = ${port};
   var STORAGE_KEY = 'rspack-devtools-dock-state';
   var REGISTERED_DOCKS = ${serializedDocks};
 
+  // ===== Build dock entries =====
   var DOCKS = REGISTERED_DOCKS.map(function(d) {
-    return { id: d.id, title: d.title, icon: d.icon, type: d.type, url: d.url || DEVTOOLS_URL };
+    var entry = { id: d.id, title: d.title, icon: d.icon, type: d.type, category: d.category || 'default' };
+    if (d.type === 'iframe') entry.url = d.url || DEVTOOLS_URL;
+    if (d.type === 'launcher') entry.launcher = d.launcher;
+    if (d.type === 'action') entry.action = d.action;
+    if (d.type === 'custom-render') entry.renderer = d.renderer;
+    return entry;
   });
 
   if (DOCKS.length === 0) {
-    DOCKS = [
-      { id: 'rspack-build', title: 'Build Analysis', icon: 'ph:lightning-duotone', type: 'iframe', url: DEVTOOLS_URL },
-    ];
+    DOCKS = [{ id: 'rspack-build', title: 'Build Analysis', icon: 'ph:lightning-duotone', type: 'iframe', url: DEVTOOLS_URL, category: '~rspackplus' }];
   }
+
+  // Append builtin entries (aligned with vite-devtools core builtins)
+  var BUILTIN_DOCKS = [
+    { id: '~logs', title: 'Logs & Notifications', icon: 'ph:notification-duotone', type: '~builtin', url: DEVTOOLS_URL + '/dock/logs', category: '~builtin' },
+    { id: '~settings', title: 'Settings', icon: 'ph:gear-duotone', type: '~builtin', url: DEVTOOLS_URL + '/dock/settings', category: '~builtin' },
+    { id: '~self-inspect', title: 'Self Inspect', icon: 'ph:stethoscope-duotone', type: '~builtin', url: DEVTOOLS_URL + '/dock/self-inspect', category: '~builtin' },
+    { id: '~popup', title: 'Popup', icon: 'ph:arrow-square-out-duotone', type: '~popup', category: '~builtin' },
+  ];
+  DOCKS = DOCKS.concat(BUILTIN_DOCKS);
 
   var defaults = {
     position: 'left', width: 45, height: 55, left: 50, top: 50,
@@ -59,28 +90,27 @@ export function getInjectClientScript(
   catch(e) { store = Object.assign({}, defaults); }
   function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); } catch(e) {} }
 
-  // ===== Iconify-based SVG icon rendering =====
-  var iconCache = {};
+  // ===== Iconify SVG icons =====
+  var builtinIcons = {
+    'ph:lightning-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor"/></svg>'; },
+    'ph:folder-open-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" fill="currentColor" opacity="0.85"/></svg>'; },
+    'ph:terminal-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="2" fill="currentColor" opacity="0.15"/><path d="M6 16l4-4-4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 16h6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>'; },
+    'ph:notification-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" fill="currentColor" opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'; },
+    'ph:gear-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.3"/><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" stroke="currentColor" stroke-width="1.5"/></svg>'; },
+    'ph:arrow-square-out-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'; },
+    'ph:stethoscope-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><circle cx="17" cy="14" r="3" fill="currentColor" opacity="0.3"/><path d="M4.8 2.3A.3.3 0 005 2h2a.3.3 0 01.3.3V7a4 4 0 01-8 0V2.3A.3.3 0 014.8 2M14 11V9a2 2 0 00-2-2H8a2 2 0 00-2 2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="14" r="3" stroke="currentColor" stroke-width="1.5"/></svg>'; },
+    'ph:chart-bar-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" fill="currentColor" opacity="0.6"/><rect x="10" y="7" width="4" height="14" rx="1" fill="currentColor" opacity="0.8"/><rect x="17" y="3" width="4" height="18" rx="1" fill="currentColor"/></svg>'; },
+    'ph:puzzle-piece-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><path d="M20 8h-3V5a2 2 0 00-2-2H9a2 2 0 00-2 2v3H4a2 2 0 00-2 2v6a2 2 0 002 2h3v3a2 2 0 002 2h6a2 2 0 002-2v-3h3a2 2 0 002-2v-6a2 2 0 00-2-2z" fill="currentColor" opacity="0.7"/></svg>'; },
+    'ph:cursor-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 7-6 2-2 6z" fill="currentColor" opacity="0.7"/></svg>'; },
+    'ph:code-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; },
+    'ph:house-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><path d="M3 12l9-8 9 8v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8z" fill="currentColor" opacity="0.7"/></svg>'; },
+    'ph:rocket-launch-duotone': function(s) { return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z" fill="currentColor" opacity="0.3"/><path d="M12 13l-3-3" stroke="currentColor" stroke-width="1.5"/><path d="M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>'; },
+  };
+
   function renderIcon(iconName, size) {
     size = size || 20;
-
-    // Built-in SVG icons for common cases
-    var builtins = {
-      'ph:lightning-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor"/></svg>',
-      'ph:folder-open-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" fill="currentColor" opacity="0.85"/></svg>',
-      'ph:terminal-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="2" fill="currentColor" opacity="0.15"/><path d="M6 16l4-4-4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 16h6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>',
-      'ph:chart-bar-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" fill="currentColor" opacity="0.6"/><rect x="10" y="7" width="4" height="14" rx="1" fill="currentColor" opacity="0.8"/><rect x="17" y="3" width="4" height="18" rx="1" fill="currentColor"/></svg>',
-      'ph:puzzle-piece-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M20 8h-3V5a2 2 0 00-2-2H9a2 2 0 00-2 2v3H4a2 2 0 00-2 2v6a2 2 0 002 2h3v3a2 2 0 002 2h6a2 2 0 002-2v-3h3a2 2 0 002-2v-6a2 2 0 00-2-2z" fill="currentColor" opacity="0.7"/></svg>',
-      'ph:cursor-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 7-6 2-2 6z" fill="currentColor" opacity="0.7"/></svg>',
-      'ph:code-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-      'ph:house-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M3 12l9-8 9 8v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8z" fill="currentColor" opacity="0.7"/></svg>',
-      'ph:rocket-launch-duotone': '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><path d="M12 2c2 4 2 8 0 12s-4 6-8 8c4-2 8-2 12 0-2-4-2-8 0-12s4-6 8-8c-4 2-8 2-12 0z" fill="currentColor" opacity="0.6"/></svg>',
-    };
-
-    if (builtins[iconName]) return builtins[iconName];
-
-    // Fallback: generic icon placeholder
-    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" opacity="0.5"/></svg>';
+    if (builtinIcons[iconName]) return builtinIcons[iconName](size);
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" opacity="0.5"/></svg>';
   }
 
   function makeSVG(type) {
@@ -92,7 +122,7 @@ export function getInjectClientScript(
     return '';
   }
 
-  // ===== Root container =====
+  // ===== Root =====
   var root = document.createElement('div');
   root.id = 'rspack-devtools-root';
   root.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;inset:0;font-family:system-ui,-apple-system,sans-serif;font-size:15px;';
@@ -111,22 +141,13 @@ export function getInjectClientScript(
 
   var dockBar = document.createElement('div');
   dockBar.id = 'rspack-devtools-dock';
-  dockBar.style.cssText = [
-    'height:40px;border-radius:9999px;user-select:none;touch-action:none;margin:auto;',
-    'background:rgba(17,17,17,0.5);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);',
-    'box-shadow:0 1px 3px 0 rgba(0,0,0,0.1),0 1px 2px -1px rgba(0,0,0,0.1);',
-    'transition:all 500ms cubic-bezier(0.34,1.56,0.64,1);',
-    'display:flex;align-items:center;position:relative;',
-    'width:calc-size(max-content,size);',
-  ].join('');
+  dockBar.style.cssText = 'height:40px;border-radius:9999px;user-select:none;touch-action:none;margin:auto;background:rgba(17,17,17,0.5);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);box-shadow:0 1px 3px 0 rgba(0,0,0,0.1),0 1px 2px -1px rgba(0,0,0,0.1);transition:all 500ms cubic-bezier(0.34,1.56,0.64,1);display:flex;align-items:center;position:relative;width:calc-size(max-content,size);';
 
   var bracketL = document.createElement('span');
-  bracketL.className = 'rspack-devtools-dock-bracket';
   bracketL.style.cssText = 'position:absolute;left:-4px;top:50%;transform:translateY(-50%);width:10px;color:white;opacity:0.75;transition:opacity 300ms,width 500ms;display:flex;align-items:center;';
   bracketL.innerHTML = makeSVG('bracket-left');
 
   var bracketR = document.createElement('span');
-  bracketR.className = 'rspack-devtools-dock-bracket';
   bracketR.style.cssText = 'position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:10px;color:white;opacity:0.75;transition:opacity 300ms,width 500ms;display:flex;align-items:center;';
   bracketR.innerHTML = makeSVG('bracket-right');
 
@@ -134,22 +155,17 @@ export function getInjectClientScript(
   miniLogo.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;opacity:0;transition:opacity 300ms;pointer-events:none;display:flex;align-items:center;justify-content:center;';
   miniLogo.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="rgl2" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#rgl2)"/></svg>';
 
-  var dockEntries = document.createElement('div');
-  dockEntries.style.cssText = 'display:flex;align-items:center;width:100%;height:100%;justify-content:center;padding:0 12px;gap:0;transition:opacity 300ms;overflow:hidden;';
+  var dockEntriesEl = document.createElement('div');
+  dockEntriesEl.style.cssText = 'display:flex;align-items:center;width:100%;height:100%;justify-content:center;padding:0 12px;gap:0;transition:opacity 300ms;overflow:hidden;';
 
+  // ===== Create dock buttons =====
   var dockButtons = [];
   DOCKS.forEach(function(dock) {
     var btn = document.createElement('button');
     btn.title = dock.title;
     btn.dataset.dockId = dock.id;
-    btn.style.cssText = [
-      'display:flex;align-items:center;justify-content:center;',
-      'width:32px;height:32px;border:none;background:transparent;',
-      'color:rgba(255,255,255,0.5);cursor:pointer;border-radius:12px;',
-      'transition:all 300ms cubic-bezier(0.34,1.56,0.64,1);padding:0;position:relative;',
-    ].join('');
+    btn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;border-radius:12px;transition:all 300ms cubic-bezier(0.34,1.56,0.64,1);padding:0;position:relative;';
     btn.innerHTML = renderIcon(dock.icon);
-
     btn.onmouseenter = function() {
       if (store.selectedDock !== dock.id || !store.open) {
         btn.style.color = 'rgba(255,255,255,0.85)';
@@ -166,22 +182,16 @@ export function getInjectClientScript(
       }
       hideTooltip();
     };
-    btn.onpointerdown = function(e) {
-      e.stopPropagation();
-    };
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      toggleDock(dock.id);
-    };
-
+    btn.onpointerdown = function(e) { e.stopPropagation(); };
+    btn.onclick = function(e) { e.stopPropagation(); handleDockClick(dock); };
     dockButtons.push({ el: btn, dock: dock });
-    dockEntries.appendChild(btn);
+    dockEntriesEl.appendChild(btn);
   });
 
   dockBar.appendChild(bracketL);
   dockBar.appendChild(bracketR);
   dockBar.appendChild(miniLogo);
-  dockBar.appendChild(dockEntries);
+  dockBar.appendChild(dockEntriesEl);
   dockContainer.appendChild(dockBar);
   anchor.appendChild(glow);
   anchor.appendChild(dockContainer);
@@ -230,8 +240,8 @@ export function getInjectClientScript(
     b.onpointerdown = function(e) { e.stopPropagation(); };
     b.onclick = onclick;
     b.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:4px;display:flex;align-items:center;border-radius:6px;transition:all 200ms;width:24px;height:24px;justify-content:center;';
-    b.onmouseenter = function(){ b.style.color='rgba(255,255,255,0.8)'; b.style.background='rgba(136,136,136,0.1)'; };
-    b.onmouseleave = function(){ b.style.color='rgba(255,255,255,0.3)'; b.style.background='none'; };
+    b.onmouseenter = function() { b.style.color='rgba(255,255,255,0.8)'; b.style.background='rgba(136,136,136,0.1)'; };
+    b.onmouseleave = function() { b.style.color='rgba(255,255,255,0.3)'; b.style.background='none'; };
     return b;
   }
 
@@ -239,136 +249,206 @@ export function getInjectClientScript(
   headerActions.style.cssText = 'display:flex;gap:2px;';
   headerActions.appendChild(mkHeaderBtn('Open in new window', makeSVG('popout'), function() {
     var dock = DOCKS.find(function(d) { return d.id === store.selectedDock; });
-    var url = dock ? dock.url : DEVTOOLS_URL;
+    var url = dock && dock.url ? dock.url : DEVTOOLS_URL;
     window.open(url, 'rspack-devtools', 'width=1200,height=800');
     closePanel();
   }));
-  headerActions.appendChild(mkHeaderBtn('Close panel', makeSVG('close'), function() {
-    closePanel();
-  }));
+  headerActions.appendChild(mkHeaderBtn('Close panel', makeSVG('close'), function() { closePanel(); }));
 
   panelHeader.appendChild(panelIcon);
   panelHeader.appendChild(panelTitle);
   panelHeader.appendChild(headerActions);
 
-  var iframe = document.createElement('iframe');
-  iframe.style.cssText = 'width:100%;border:none;border:1px solid rgba(136,136,136,0.2);border-radius:8px;display:block;';
+  // Panel content: iframe (for iframe/builtin), launcher div, custom-render div
+  var panelIframe = document.createElement('iframe');
+  panelIframe.style.cssText = 'width:100%;border:none;border:1px solid rgba(136,136,136,0.2);border-radius:8px;display:block;';
+
+  var panelLauncher = document.createElement('div');
+  panelLauncher.style.cssText = 'width:100%;display:none;padding:40px;text-align:center;color:rgba(255,255,255,0.8);';
+
+  var panelCustom = document.createElement('div');
+  panelCustom.style.cssText = 'width:100%;display:none;overflow:auto;';
 
   panel.appendChild(panelHeader);
-  panel.appendChild(iframe);
+  panel.appendChild(panelIframe);
+  panel.appendChild(panelLauncher);
+  panel.appendChild(panelCustom);
+
+  // ===== Toast overlay =====
+  var toastContainer = document.createElement('div');
+  toastContainer.id = 'rspack-devtools-toasts';
+  toastContainer.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:2147483647;pointer-events:auto;width:320px;display:flex;flex-direction:column;gap:8px;';
+
+  function addToast(entry) {
+    var toast = document.createElement('div');
+    toast.style.cssText = 'padding:10px 14px;border-radius:10px;background:rgba(20,20,30,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 16px rgba(0,0,0,0.4);color:rgba(255,255,255,0.85);font-size:13px;cursor:pointer;transition:all 300ms;opacity:0;transform:translateX(20px);display:flex;align-items:flex-start;gap:8px;';
+    var levelColors = { error: '#ef4444', warn: '#eab308', success: '#22c55e', info: '#3b82f6', debug: '#9ca3af' };
+    var bar = document.createElement('div');
+    bar.style.cssText = 'width:3px;min-height:20px;border-radius:2px;flex-shrink:0;align-self:stretch;background:' + (levelColors[entry.level] || '#3b82f6') + ';';
+    var body = document.createElement('div');
+    body.style.cssText = 'flex:1;min-width:0;';
+    var msg = document.createElement('div');
+    msg.style.cssText = 'font-weight:500;font-size:12px;';
+    msg.textContent = entry.message;
+    body.appendChild(msg);
+    if (entry.description) {
+      var desc = document.createElement('div');
+      desc.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      desc.textContent = entry.description;
+      body.appendChild(desc);
+    }
+    toast.appendChild(bar);
+    toast.appendChild(body);
+    toast.onclick = function() {
+      handleDockClick(DOCKS.find(function(d) { return d.id === '~logs'; }));
+      dismissToast(toast);
+    };
+    toastContainer.appendChild(toast);
+    requestAnimationFrame(function() { toast.style.opacity = '1'; toast.style.transform = 'none'; });
+    var timeout = entry.autoDismiss || 5000;
+    setTimeout(function() { dismissToast(toast); }, timeout);
+  }
+
+  function dismissToast(toast) {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(20px)';
+    setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+  }
+
   root.appendChild(anchor);
   root.appendChild(panel);
+  root.appendChild(toastContainer);
   document.body.appendChild(root);
 
-  // ===== Minimization =====
-  var isMinimized = false;
-  var inactiveTimer = null;
-  var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-  function minimize() {
-    if (store.open || isMinimized || isTouchDevice) return;
-    isMinimized = true;
-    dockBar.style.width = '22px';
-    dockBar.style.height = '22px';
-    dockBar.style.padding = '0';
-    dockEntries.style.opacity = '0';
-    dockEntries.style.pointerEvents = 'none';
-    miniLogo.style.opacity = '1';
-    bracketL.style.width = '6px'; bracketL.style.opacity = '0.5';
-    bracketR.style.width = '6px'; bracketR.style.opacity = '0.5';
+  // ===== WebSocket for log notifications =====
+  var wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  function connectWs() {
+    try {
+      var ws = new WebSocket(wsProtocol + '//' + '${host}' + ':' + WS_PORT);
+      var reqId = 0;
+      ws.onmessage = function(e) {
+        try {
+          var msg = JSON.parse(e.data);
+          if (msg.m === 'devtoolskit:internal:logs:updated') {
+            fetchNewLogs(ws, reqId);
+          }
+        } catch(ex) {}
+      };
+      ws.onclose = function() { setTimeout(connectWs, 5000); };
+      ws.onerror = function() {};
+    } catch(ex) {}
   }
 
-  function expand() {
-    if (!isMinimized) return;
-    isMinimized = false;
-    dockBar.style.width = 'calc-size(max-content,size)';
-    dockBar.style.height = '40px';
-    dockBar.style.padding = '';
-    dockEntries.style.opacity = '1';
-    dockEntries.style.pointerEvents = 'auto';
-    miniLogo.style.opacity = '0';
-    bracketL.style.width = '10px'; bracketL.style.opacity = '0.75';
-    bracketR.style.width = '10px'; bracketR.style.opacity = '0.75';
-    resetInactiveTimer();
+  var lastLogVersion;
+  function fetchNewLogs(ws, startReqId) {
+    var tid = 'toast-' + (++startReqId);
+    try {
+      ws.send(JSON.stringify({ m: 'devtoolskit:internal:logs:list', a: [lastLogVersion], t: tid }));
+      var handler = function(e) {
+        try {
+          var msg = JSON.parse(e.data);
+          if (msg.t === tid && msg.d) {
+            ws.removeEventListener('message', handler);
+            lastLogVersion = msg.d.version;
+            if (msg.d.entries) {
+              msg.d.entries.forEach(function(entry) {
+                if (entry.notify) addToast(entry);
+              });
+            }
+          }
+        } catch(ex) {}
+      };
+      ws.addEventListener('message', handler);
+    } catch(ex) {}
   }
 
-  function resetInactiveTimer() {
-    if (inactiveTimer) clearTimeout(inactiveTimer);
-    if (store.inactiveTimeout > 0 && !store.open) {
-      inactiveTimer = setTimeout(minimize, store.inactiveTimeout);
+  connectWs();
+
+  // ===== Panel content switching =====
+  function showPanelContent(type) {
+    panelIframe.style.display = (type === 'iframe' || type === '~builtin') ? 'block' : 'none';
+    panelLauncher.style.display = type === 'launcher' ? 'block' : 'none';
+    panelCustom.style.display = type === 'custom-render' ? 'block' : 'none';
+  }
+
+  function renderLauncher(dock) {
+    var l = dock.launcher;
+    panelLauncher.innerHTML = '';
+    var icon = document.createElement('div');
+    icon.style.cssText = 'margin-bottom:16px;';
+    icon.innerHTML = renderIcon(dock.icon, 48);
+    icon.firstChild.style.color = 'rgba(255,255,255,0.5)';
+    var title = document.createElement('h3');
+    title.style.cssText = 'font-size:18px;font-weight:600;color:rgba(255,255,255,0.9);margin:0 0 8px;';
+    title.textContent = l.title;
+    var desc = document.createElement('p');
+    desc.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.5);margin:0 0 24px;';
+    desc.textContent = l.description || '';
+    var btn = document.createElement('button');
+    btn.style.cssText = 'padding:8px 24px;border-radius:8px;border:none;background:#a78bfa;color:white;font-size:14px;font-weight:500;cursor:pointer;transition:all 200ms;';
+    btn.textContent = l.buttonStart || 'Launch';
+    var status = l.status || 'idle';
+    if (status === 'loading') { btn.textContent = l.buttonLoading || 'Loading...'; btn.disabled = true; btn.style.opacity = '0.6'; }
+    if (status === 'success') { btn.textContent = 'Done'; btn.disabled = true; btn.style.background = '#22c55e'; }
+    if (status === 'error') { btn.textContent = 'Error'; btn.disabled = true; btn.style.background = '#ef4444'; }
+    btn.onclick = function() {
+      btn.textContent = l.buttonLoading || 'Loading...';
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      fetch(DEVTOOLS_URL + '/.devtools/api/launch/' + encodeURIComponent(dock.id), { method: 'POST' })
+        .then(function() { btn.textContent = 'Done'; btn.style.background = '#22c55e'; })
+        .catch(function() { btn.textContent = 'Error'; btn.style.background = '#ef4444'; });
+    };
+    panelLauncher.appendChild(icon);
+    panelLauncher.appendChild(title);
+    panelLauncher.appendChild(desc);
+    panelLauncher.appendChild(btn);
+  }
+
+  // ===== Dock click handler =====
+  function handleDockClick(dock) {
+    if (!dock) return;
+
+    if (dock.type === '~popup') {
+      window.open(DEVTOOLS_URL, 'rspack-devtools', 'width=1200,height=800');
+      return;
     }
-  }
 
-  anchor.onmouseenter = function() { glow.style.opacity = '0.6'; expand(); };
-  anchor.onmouseleave = function() { glow.style.opacity = '0'; resetInactiveTimer(); };
-  anchor.onmousemove = function() { if (!isMinimized) resetInactiveTimer(); };
-
-  function isVertical() { return store.position === 'left' || store.position === 'right'; }
-
-  function positionAnchor() {
-    var p = store.position, m = 2;
-    anchor.style.left = 'auto'; anchor.style.right = 'auto';
-    anchor.style.top = 'auto'; anchor.style.bottom = 'auto';
-    dockContainer.style.transform = isVertical()
-      ? 'translate(-50%,-50%) rotate(90deg)'
-      : 'translate(-50%,-50%)';
-    var halfH = 20;
-    var off = store.anchorOffset;
-    if (p === 'left') { anchor.style.left = (m + halfH) + 'px'; anchor.style.top = off + '%'; }
-    else if (p === 'right') { anchor.style.left = (window.innerWidth - m - halfH) + 'px'; anchor.style.top = off + '%'; }
-    else if (p === 'top') { anchor.style.left = off + '%'; anchor.style.top = (m + halfH) + 'px'; }
-    else { anchor.style.left = off + '%'; anchor.style.top = (window.innerHeight - m - halfH) + 'px'; }
-  }
-
-  function positionPanel() {
-    var p = store.position, w = store.width, h = store.height, m = 4;
-    panel.style.left = 'auto'; panel.style.right = 'auto';
-    panel.style.top = 'auto'; panel.style.bottom = 'auto';
-    if (p === 'left') {
-      panel.style.left = m + 'px'; panel.style.top = m + 'px';
-      panel.style.width = w + 'vw'; panel.style.height = 'calc(100vh - ' + (m*2) + 'px)';
-      iframe.style.height = 'calc(100vh - ' + (m*2 + 36) + 'px)';
-    } else if (p === 'right') {
-      panel.style.right = m + 'px'; panel.style.top = m + 'px';
-      panel.style.width = w + 'vw'; panel.style.height = 'calc(100vh - ' + (m*2) + 'px)';
-      iframe.style.height = 'calc(100vh - ' + (m*2 + 36) + 'px)';
-    } else if (p === 'bottom') {
-      panel.style.left = m + 'px'; panel.style.bottom = m + 'px';
-      panel.style.width = 'calc(100vw - ' + (m*2) + 'px)'; panel.style.height = h + 'vh';
-      iframe.style.height = 'calc(' + h + 'vh - 36px)';
-    } else {
-      panel.style.left = m + 'px'; panel.style.top = m + 'px';
-      panel.style.width = 'calc(100vw - ' + (m*2) + 'px)'; panel.style.height = h + 'vh';
-      iframe.style.height = 'calc(' + h + 'vh - 36px)';
+    if (dock.type === 'action') {
+      loadClientScript(dock.action, dock);
+      return;
     }
+
+    if (store.open && store.selectedDock === dock.id) {
+      closePanel();
+      return;
+    }
+
+    store.selectedDock = dock.id;
+    openPanel(dock);
   }
 
-  function updateDockButtons() {
-    dockButtons.forEach(function(item) {
-      var isSelected = store.selectedDock === item.dock.id && store.open;
-      item.el.style.color = isSelected ? '#a78bfa' : 'rgba(255,255,255,0.5)';
-      item.el.style.background = isSelected ? 'rgba(136,136,136,0.07)' : 'transparent';
-      item.el.style.transform = isSelected ? 'scale(1.2)' : 'scale(1)';
-    });
-  }
-
-  function toggleDock(dockId) {
-    if (store.open && store.selectedDock === dockId) { closePanel(); }
-    else { store.selectedDock = dockId; openPanel(dockId); }
-  }
-
-  function openPanel(dockId) {
-    var dock = DOCKS.find(function(d) { return d.id === dockId; });
-    var url = dock ? dock.url : DEVTOOLS_URL;
-    if (!url) return;
+  function openPanel(dock) {
     store.open = true;
-    store.selectedDock = dockId;
+    store.selectedDock = dock.id;
     save();
     positionPanel();
     panel.style.display = 'block';
     requestAnimationFrame(function() { panel.style.opacity = '1'; panel.style.transform = 'none'; });
-    panelTitle.textContent = dock ? dock.title : 'Rspack DevTools';
-    if (iframe.src !== url) iframe.src = url;
+    panelTitle.textContent = dock.title;
+
+    if (dock.type === 'launcher') {
+      showPanelContent('launcher');
+      renderLauncher(dock);
+    } else if (dock.type === 'custom-render') {
+      showPanelContent('custom-render');
+      loadClientScript(dock.renderer, dock);
+    } else {
+      showPanelContent('iframe');
+      var url = dock.url || DEVTOOLS_URL;
+      if (panelIframe.src !== url) panelIframe.src = url;
+    }
+
     updateDockButtons();
     if (inactiveTimer) clearTimeout(inactiveTimer);
   }
@@ -382,7 +462,118 @@ export function getInjectClientScript(
     resetInactiveTimer();
   }
 
-  // ===== Drag anchor =====
+  // ===== Client script execution (for action & custom-render entries) =====
+  var loadedScripts = {};
+  function loadClientScript(scriptDef, dock) {
+    if (!scriptDef || !scriptDef.importFrom) return;
+    var key = dock.type + ':' + dock.id;
+    if (loadedScripts[key] && dock.type !== 'action') return;
+
+    import(DEVTOOLS_URL + '/.devtools/client-imports.js').then(function(mod) {
+      if (!mod.importsMap || !mod.importsMap[key]) return;
+      return mod.importsMap[key]();
+    }).then(function(setupFn) {
+      if (!setupFn) return;
+      loadedScripts[key] = true;
+      var events = {};
+      var eventHandlers = {};
+      var ctx = {
+        current: {
+          rpc: { call: function(method) { /* simplified RPC */ } },
+          events: {
+            on: function(evt, fn) { if (!eventHandlers[evt]) eventHandlers[evt] = []; eventHandlers[evt].push(fn); },
+            off: function(evt, fn) { if (eventHandlers[evt]) eventHandlers[evt] = eventHandlers[evt].filter(function(f) { return f !== fn; }); },
+            emit: function(evt) { var args = Array.prototype.slice.call(arguments, 1); (eventHandlers[evt] || []).forEach(function(fn) { fn.apply(null, args); }); },
+          },
+        },
+      };
+      setupFn(ctx);
+      ctx.current.events.emit('entry:activated');
+    }).catch(function(err) { console.warn('[DevTools] Failed to load client script for ' + key, err); });
+  }
+
+  // ===== Minimization =====
+  var isMinimized = false;
+  var inactiveTimer = null;
+  var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+  function minimize() {
+    if (store.open || isMinimized || isTouchDevice) return;
+    isMinimized = true;
+    dockBar.style.width = '22px'; dockBar.style.height = '22px'; dockBar.style.padding = '0';
+    dockEntriesEl.style.opacity = '0'; dockEntriesEl.style.pointerEvents = 'none';
+    miniLogo.style.opacity = '1';
+    bracketL.style.width = '6px'; bracketL.style.opacity = '0.5';
+    bracketR.style.width = '6px'; bracketR.style.opacity = '0.5';
+  }
+  function expand() {
+    if (!isMinimized) return;
+    isMinimized = false;
+    dockBar.style.width = 'calc-size(max-content,size)'; dockBar.style.height = '40px'; dockBar.style.padding = '';
+    dockEntriesEl.style.opacity = '1'; dockEntriesEl.style.pointerEvents = 'auto';
+    miniLogo.style.opacity = '0';
+    bracketL.style.width = '10px'; bracketL.style.opacity = '0.75';
+    bracketR.style.width = '10px'; bracketR.style.opacity = '0.75';
+    resetInactiveTimer();
+  }
+  function resetInactiveTimer() {
+    if (inactiveTimer) clearTimeout(inactiveTimer);
+    if (store.inactiveTimeout > 0 && !store.open) inactiveTimer = setTimeout(minimize, store.inactiveTimeout);
+  }
+
+  anchor.onmouseenter = function() { glow.style.opacity = '0.6'; expand(); };
+  anchor.onmouseleave = function() { glow.style.opacity = '0'; resetInactiveTimer(); };
+  anchor.onmousemove = function() { if (!isMinimized) resetInactiveTimer(); };
+
+  function isVertical() { return store.position === 'left' || store.position === 'right'; }
+
+  function positionAnchor() {
+    var p = store.position, m = 2;
+    anchor.style.left = 'auto'; anchor.style.right = 'auto'; anchor.style.top = 'auto'; anchor.style.bottom = 'auto';
+    dockContainer.style.transform = isVertical() ? 'translate(-50%,-50%) rotate(90deg)' : 'translate(-50%,-50%)';
+    var halfH = 20, off = store.anchorOffset;
+    if (p === 'left') { anchor.style.left = (m + halfH) + 'px'; anchor.style.top = off + '%'; }
+    else if (p === 'right') { anchor.style.left = (window.innerWidth - m - halfH) + 'px'; anchor.style.top = off + '%'; }
+    else if (p === 'top') { anchor.style.left = off + '%'; anchor.style.top = (m + halfH) + 'px'; }
+    else { anchor.style.left = off + '%'; anchor.style.top = (window.innerHeight - m - halfH) + 'px'; }
+  }
+
+  function positionPanel() {
+    var p = store.position, w = store.width, h = store.height, m = 4;
+    panel.style.left = 'auto'; panel.style.right = 'auto'; panel.style.top = 'auto'; panel.style.bottom = 'auto';
+    if (p === 'left') {
+      panel.style.left = m+'px'; panel.style.top = m+'px';
+      panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
+      panelIframe.style.height = 'calc(100vh - '+(m*2+36)+'px)';
+      panelLauncher.style.height = panelCustom.style.height = panelIframe.style.height;
+    } else if (p === 'right') {
+      panel.style.right = m+'px'; panel.style.top = m+'px';
+      panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
+      panelIframe.style.height = 'calc(100vh - '+(m*2+36)+'px)';
+      panelLauncher.style.height = panelCustom.style.height = panelIframe.style.height;
+    } else if (p === 'bottom') {
+      panel.style.left = m+'px'; panel.style.bottom = m+'px';
+      panel.style.width = 'calc(100vw - '+(m*2)+'px)'; panel.style.height = h+'vh';
+      panelIframe.style.height = 'calc('+h+'vh - 36px)';
+      panelLauncher.style.height = panelCustom.style.height = panelIframe.style.height;
+    } else {
+      panel.style.left = m+'px'; panel.style.top = m+'px';
+      panel.style.width = 'calc(100vw - '+(m*2)+'px)'; panel.style.height = h+'vh';
+      panelIframe.style.height = 'calc('+h+'vh - 36px)';
+      panelLauncher.style.height = panelCustom.style.height = panelIframe.style.height;
+    }
+  }
+
+  function updateDockButtons() {
+    dockButtons.forEach(function(item) {
+      var isSelected = store.selectedDock === item.dock.id && store.open;
+      item.el.style.color = isSelected ? '#a78bfa' : 'rgba(255,255,255,0.5)';
+      item.el.style.background = isSelected ? 'rgba(136,136,136,0.07)' : 'transparent';
+      item.el.style.transform = isSelected ? 'scale(1.2)' : 'scale(1)';
+    });
+  }
+
+  // ===== Drag =====
   var isDragging = false, wasDragging = false, dragStartX, dragStartY;
   anchor.onpointerdown = function(e) {
     if (e.button !== 0) return;
@@ -396,18 +587,15 @@ export function getInjectClientScript(
     if (Math.abs(e.clientX - dragStartX) > 4 || Math.abs(e.clientY - dragStartY) > 4) wasDragging = true;
     if (!wasDragging) return;
     dockContainer.style.transition = 'none';
-    var cx = e.clientX, cy = e.clientY;
-    var W = window.innerWidth, H = window.innerHeight;
-    var centerX = W / 2, centerY = H / 2;
+    var cx = e.clientX, cy = e.clientY, W = window.innerWidth, H = window.innerHeight;
+    var centerX = W/2, centerY = H/2;
     var deg = Math.atan2(cy - centerY, cx - centerX);
     var MARGIN = 70;
     var TL = Math.atan2(-centerY + MARGIN, -centerX);
     var TR = Math.atan2(-centerY + MARGIN, W - centerX);
     var BL = Math.atan2(H - MARGIN - centerY, -centerX);
     var BR = Math.atan2(H - MARGIN - centerY, W - centerX);
-    store.position = deg >= TL && deg <= TR ? 'top'
-      : deg >= TR && deg <= BR ? 'right'
-      : deg >= BR && deg <= BL ? 'bottom' : 'left';
+    store.position = deg >= TL && deg <= TR ? 'top' : deg >= TR && deg <= BR ? 'right' : deg >= BR && deg <= BL ? 'bottom' : 'left';
     var pct = store.position === 'left' || store.position === 'right'
       ? Math.max(10, Math.min(90, (cy / H) * 100))
       : Math.max(10, Math.min(90, (cx / W) * 100));
@@ -423,11 +611,11 @@ export function getInjectClientScript(
     dockContainer.style.transition = 'all 500ms cubic-bezier(0.34,1.56,0.64,1)';
   };
 
-  // ===== Keyboard shortcut =====
+  // ===== Keyboard =====
   document.addEventListener('keydown', function(e) {
     if (e.altKey && e.key === 'd') {
       if (store.open) closePanel();
-      else toggleDock(store.selectedDock || DOCKS[0].id);
+      else handleDockClick(DOCKS.find(function(d) { return d.id === (store.selectedDock || DOCKS[0].id); }));
       e.preventDefault();
     }
   });
@@ -437,7 +625,10 @@ export function getInjectClientScript(
   // ===== Init =====
   positionAnchor();
   updateDockButtons();
-  if (store.open && store.selectedDock) openPanel(store.selectedDock);
+  if (store.open && store.selectedDock) {
+    var initDock = DOCKS.find(function(d) { return d.id === store.selectedDock; });
+    if (initDock) openPanel(initDock);
+  }
   resetInactiveTimer();
 })();`
 }

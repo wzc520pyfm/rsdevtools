@@ -1,6 +1,12 @@
 import { createBirpc } from 'birpc'
 import { ref, shallowRef } from 'vue'
 
+export interface LogsListResult {
+  entries: any[]
+  removedIds: string[]
+  version: number
+}
+
 export interface ServerFunctions {
   'rspack:list-sessions': () => Promise<Array<{ id: string; timestamp: number; duration: number; hash: string }>>
   'rspack:get-session': (args: { session: string }) => Promise<any>
@@ -26,6 +32,16 @@ export interface ServerFunctions {
   'rspack:read-file': (args: { path: string }) => Promise<any>
   'rspack:write-file': (args: { path: string; content: string }) => Promise<void>
   'rspack:get-file-info': () => Promise<any>
+  'devtoolskit:internal:logs:list': (since?: number) => Promise<LogsListResult>
+  'devtoolskit:internal:logs:add': (input: any) => Promise<any>
+  'devtoolskit:internal:logs:update': (id: string, patch: any) => Promise<any>
+  'devtoolskit:internal:logs:remove': (id: string) => Promise<void>
+  'devtoolskit:internal:logs:clear': () => Promise<void>
+  'devtoolskit:internal:docks:on-launch': (dockId: string) => Promise<void>
+  'devtoolskit:self-inspect:get-docks': () => Promise<any[]>
+  'devtoolskit:self-inspect:get-rpc-functions': () => Promise<any[]>
+  'devtoolskit:self-inspect:get-client-scripts': () => Promise<any[]>
+  'devtoolskit:self-inspect:get-devtools-plugins': () => Promise<any[]>
 }
 
 export interface ClientFunctions {
@@ -33,12 +49,16 @@ export interface ClientFunctions {
   'rspack:build-completed': (session: { id: string; timestamp: number }) => void
   'rspack:terminal-output': (args: { id: string; data: string }) => void
   'rspack:terminal-exit': (args: { id: string; exitCode: number }) => void
+  'devtoolskit:internal:logs:updated': () => void
+  'devtoolskit:internal:terminals:updated': () => void
+  'devtoolskit:internal:terminals:stream-chunk': (data: { id: string; data: string }) => void
 }
 
 const rpcInstance = shallowRef<ReturnType<typeof createBirpc<ServerFunctions, ClientFunctions>> | null>(null)
 const connected = ref(false)
 const buildNotification = ref<{ id: string; timestamp: number } | null>(null)
 const terminalOutputs = ref<Map<string, string>>(new Map())
+const logsUpdateListeners = new Set<() => void>()
 
 let readyPromise: Promise<void> | null = null
 let readyResolve: (() => void) | null = null
@@ -66,6 +86,10 @@ export function useRpc() {
       if (!rpcInstance.value) throw new Error('RPC not connected')
       return (rpcInstance.value as any)[method](...args)
     },
+    onLogsUpdated: (fn: () => void) => {
+      logsUpdateListeners.add(fn)
+      return () => logsUpdateListeners.delete(fn)
+    },
   }
 }
 
@@ -87,6 +111,14 @@ function initRpc() {
         terminalOutputs.value.set(id, current + data)
       },
       'rspack:terminal-exit': () => {},
+      'devtoolskit:internal:logs:updated': () => {
+        logsUpdateListeners.forEach(fn => fn())
+      },
+      'devtoolskit:internal:terminals:updated': () => {},
+      'devtoolskit:internal:terminals:stream-chunk': ({ id, data }) => {
+        const current = terminalOutputs.value.get(id) ?? ''
+        terminalOutputs.value.set(id, current + data)
+      },
     },
     {
       post: (data) => {

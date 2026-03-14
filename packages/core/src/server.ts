@@ -15,6 +15,31 @@ import { DevToolsViewHost } from './hosts/view-host'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+function renderClientImportsMap(context: DevToolsNodeContext): string {
+  const entries = context.docks.values({ includeBuiltin: false })
+  const imports: string[] = []
+
+  for (const entry of entries) {
+    if (entry.type === 'action' && 'action' in entry) {
+      const key = `action:${entry.id}`
+      const importName = entry.action.importName || 'default'
+      imports.push(`  ${JSON.stringify(key)}: () => import(${JSON.stringify(entry.action.importFrom)}).then(r => r[${JSON.stringify(importName)}])`)
+    }
+    else if (entry.type === 'custom-render' && 'renderer' in entry) {
+      const key = `custom-render:${entry.id}`
+      const importName = entry.renderer.importName || 'default'
+      imports.push(`  ${JSON.stringify(key)}: () => import(${JSON.stringify(entry.renderer.importFrom)}).then(r => r[${JSON.stringify(importName)}])`)
+    }
+    else if (entry.type === 'iframe' && 'clientScript' in entry && entry.clientScript) {
+      const key = `iframe:${entry.id}`
+      const importName = entry.clientScript.importName || 'default'
+      imports.push(`  ${JSON.stringify(key)}: () => import(${JSON.stringify(entry.clientScript.importFrom)}).then(r => r[${JSON.stringify(importName)}])`)
+    }
+  }
+
+  return `export const importsMap = {\n${imports.join(',\n')}\n};\n`
+}
+
 export interface DevToolsServer {
   port: number
   close: () => void
@@ -88,6 +113,36 @@ export async function startDevToolsServer(
       res.setHeader('Access-Control-Allow-Origin', '*')
       const entries = context.docks.values({ includeBuiltin: false })
       res.end(JSON.stringify(entries))
+      return
+    }
+
+    // Client imports map for action/custom-render/iframe client scripts
+    if (url === '/.devtools/client-imports.js') {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Cache-Control', 'no-cache')
+      res.end(renderClientImportsMap(context))
+      return
+    }
+
+    // Launcher on-launch API (POST)
+    if (url.startsWith('/.devtools/api/launch/') && req.method === 'POST') {
+      const dockId = decodeURIComponent(url.slice('/.devtools/api/launch/'.length))
+      res.setHeader('Content-Type', 'application/json')
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      rpcHost.invokeLocal('devtoolskit:internal:docks:on-launch' as any, dockId)
+        .then(() => { res.statusCode = 200; res.end(JSON.stringify({ ok: true })) })
+        .catch((err: any) => { res.statusCode = 500; res.end(JSON.stringify({ error: err?.message })) })
+      return
+    }
+
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+      res.statusCode = 204
+      res.end()
       return
     }
 

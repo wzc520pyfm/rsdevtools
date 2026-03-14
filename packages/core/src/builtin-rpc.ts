@@ -1,5 +1,6 @@
-import type { RpcFunctionDefinition } from '@rspack-devtools/kit'
+import type { DevToolsLogEntryInput, RpcFunctionDefinition } from '@rspack-devtools/kit'
 import type { DataCollector } from './collector'
+import type { DevToolsLogsHost } from './hosts/logs-host'
 import type { DevToolsTerminalHost } from './hosts/terminal-host'
 import type { FileDetail, FileEntry, SessionComparison } from './types'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
@@ -316,6 +317,156 @@ export function builtinRpcDeclarations(
       type: 'query',
       setup: (ctx) => ({
         handler: async () => ctx.docks.values({ includeBuiltin: false }),
+      }),
+    },
+
+    // ===== Internal: Logs =====
+    {
+      name: 'devtoolskit:internal:logs:list',
+      type: 'query',
+      setup: (ctx) => ({
+        handler: async (since?: number) => {
+          const host = ctx.logs as DevToolsLogsHost
+          return host.list(since)
+        },
+      }),
+    },
+    {
+      name: 'devtoolskit:internal:logs:add',
+      type: 'action',
+      setup: (ctx) => ({
+        handler: async (input: DevToolsLogEntryInput) => {
+          const handle = await ctx.logs.add({ ...input, from: input.from ?? 'browser' })
+          return handle.entry
+        },
+      }),
+    },
+    {
+      name: 'devtoolskit:internal:logs:update',
+      type: 'action',
+      setup: (ctx) => ({
+        handler: async (id: string, patch: Partial<DevToolsLogEntryInput>) => {
+          return ctx.logs.update(id, patch)
+        },
+      }),
+    },
+    {
+      name: 'devtoolskit:internal:logs:remove',
+      type: 'action',
+      setup: (ctx) => ({
+        handler: async (id: string) => {
+          await ctx.logs.remove(id)
+        },
+      }),
+    },
+    {
+      name: 'devtoolskit:internal:logs:clear',
+      type: 'action',
+      setup: (ctx) => ({
+        handler: async () => {
+          await ctx.logs.clear()
+        },
+      }),
+    },
+
+    // ===== Internal: Launcher on-launch =====
+    {
+      name: 'devtoolskit:internal:docks:on-launch',
+      type: 'action',
+      setup: (ctx) => ({
+        handler: async (dockId: string) => {
+          const entry = ctx.docks.values({ includeBuiltin: false })
+            .find(e => e.id === dockId)
+          if (!entry || entry.type !== 'launcher') {
+            throw new Error(`Dock "${dockId}" is not a launcher entry`)
+          }
+          const launcher = entry.launcher
+          try {
+            ctx.docks.update({ ...entry, launcher: { ...launcher, status: 'loading' } } as any)
+            await launcher.onLaunch()
+            ctx.docks.update({ ...entry, launcher: { ...launcher, status: 'success' } } as any)
+          }
+          catch (err: any) {
+            ctx.docks.update({
+              ...entry,
+              launcher: { ...launcher, status: 'error', error: err?.message ?? String(err) },
+            } as any)
+            throw err
+          }
+        },
+      }),
+    },
+
+    // ===== Internal: Self Inspect =====
+    {
+      name: 'devtoolskit:self-inspect:get-docks',
+      type: 'query',
+      setup: (ctx) => ({
+        handler: async () => ctx.docks.values(),
+      }),
+    },
+    {
+      name: 'devtoolskit:self-inspect:get-rpc-functions',
+      type: 'query',
+      setup: (ctx) => ({
+        handler: async () => {
+          const host = ctx.rpc as any
+          const defs = host.getDefinitions?.() as Map<string, RpcFunctionDefinition> | undefined
+          if (!defs) return []
+          return Array.from(defs.values()).map(d => ({
+            name: d.name,
+            type: d.type,
+          }))
+        },
+      }),
+    },
+    {
+      name: 'devtoolskit:self-inspect:get-client-scripts',
+      type: 'query',
+      setup: (ctx) => ({
+        handler: async () => {
+          const entries = ctx.docks.values({ includeBuiltin: false })
+          const scripts: Array<{ dockId: string; dockTitle: string; type: string; importFrom?: string; importName?: string }> = []
+          for (const entry of entries) {
+            if (entry.type === 'action' && 'action' in entry) {
+              scripts.push({
+                dockId: entry.id,
+                dockTitle: entry.title,
+                type: 'action',
+                importFrom: entry.action.importFrom,
+                importName: entry.action.importName,
+              })
+            }
+            else if (entry.type === 'custom-render' && 'renderer' in entry) {
+              scripts.push({
+                dockId: entry.id,
+                dockTitle: entry.title,
+                type: 'custom-render',
+                importFrom: entry.renderer.importFrom,
+                importName: entry.renderer.importName,
+              })
+            }
+            else if (entry.type === 'iframe' && 'clientScript' in entry && entry.clientScript) {
+              scripts.push({
+                dockId: entry.id,
+                dockTitle: entry.title,
+                type: 'iframe',
+                importFrom: entry.clientScript.importFrom,
+                importName: entry.clientScript.importName,
+              })
+            }
+          }
+          return scripts
+        },
+      }),
+    },
+    {
+      name: 'devtoolskit:self-inspect:get-devtools-plugins',
+      type: 'query',
+      setup: () => ({
+        handler: async () => {
+          return [] as Array<{ name: string; hasDevtools: boolean }>
+        },
       }),
     },
   ]

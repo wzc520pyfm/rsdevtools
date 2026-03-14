@@ -42,6 +42,21 @@ const router = createRouter({
       name: 'dock-terminal',
       component: () => import('./pages/DockTerminal.vue'),
     },
+    {
+      path: '/dock/logs',
+      name: 'dock-logs',
+      component: () => import('./pages/DockLogs.vue'),
+    },
+    {
+      path: '/dock/settings',
+      name: 'dock-settings',
+      component: () => import('./pages/DockSettings.vue'),
+    },
+    {
+      path: '/dock/self-inspect',
+      name: 'dock-self-inspect',
+      component: () => import('./pages/DockSelfInspect.vue'),
+    },
   ],
 })
 

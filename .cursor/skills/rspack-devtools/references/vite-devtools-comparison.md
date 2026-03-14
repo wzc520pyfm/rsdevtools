@@ -9,14 +9,16 @@ How rs-devtools maps to vite-devtools concepts for feature parity.
 | Vite Plugin (`configureServer`) | Rspack Plugin (`compiler.hooks.done`) | Rspack uses compiler hooks, not server hooks |
 | `rolldown` module graph | `stats.toJson({ modules, reasons })` | Rspack Stats API replaces direct graph access |
 | Nuxt-based client | Vue 3 + vue-router client | Simpler, no Nuxt dependency |
-| `@vitejs/devtools-kit` context | `DataCollector` + `ServerFunctions` | No kit abstraction; direct implementation |
+| `@vitejs/devtools-kit` context | `@rspack-devtools/kit` context | Full kit with types, RPC, constants |
 | `DevTools()` function factory | `RspackDevTools()` function factory | Both support function-style plugin API |
-| `devtools.setup(ctx)` hook | `RspackDevToolsPlugin.apply(compiler)` | Plugin lifecycle differs fundamentally |
-| `ctx.docks.register()` | Sidebar nav in client UI | No dock registry; pages are vue-router routes |
-| `ctx.rpc.register(defineRpcFunction(...))` | `createBirpc(serverFunctions, ...)` | birpc directly, no defineRpcFunction wrapper |
-| `ctx.views.hostStatic()` | `sirv(clientDistPath)` | Direct static serving |
-| `ctx.rpc.sharedState` | WebSocket broadcast events | No built-in shared state; use RPC + events |
-| `ctx.logs.add()` | Console + WebSocket events | Build-centric logging through stats |
+| `devtools.setup(ctx)` hook | `devtools.setup(ctx)` hook | Same pattern — plugins register docks/RPC |
+| `ctx.docks.register()` | `ctx.docks.register()` | Full dock registry with all entry types |
+| `ctx.rpc.register(defineRpcFunction(...))` | `ctx.rpc.register(defineRpcFunction(...))` | Same pattern with `defineRpcFunction` utility |
+| `ctx.views.hostStatic()` | `ctx.views.hostStatic()` | Static hosting for plugin UIs |
+| `ctx.rpc.sharedState` | `ctx.rpc.sharedState` | SharedState host with get/mutate/patch/on |
+| `ctx.logs.add()` | `ctx.logs.add()` | Full log system with incremental sync |
+| `ctx.terminals` | `ctx.terminals` | Terminal host with session management |
+| Web Component embedded client | Vanilla JS inject script | Different rendering approach, same capabilities |
 
 ## Feature Parity Checklist
 
@@ -41,13 +43,46 @@ How rs-devtools maps to vite-devtools concepts for feature parity.
 
 | Feature | vite-devtools | rs-devtools | Implementation |
 |---------|:---:|:---:|---|
-| Floating dock button | ✅ | ✅ | `inject.ts` — floating ⚡ button |
-| Embedded iframe panel | ✅ | ✅ | `inject.ts` — resizable iframe |
-| Pop-out standalone mode | ✅ | ✅ | Direct URL access to DevTools server |
+| Floating dock button | ✅ | ✅ | `inject.ts` — floating dock bar |
+| Embedded iframe panel | ✅ | ✅ | `inject.ts` — resizable panel |
+| Pop-out standalone mode | ✅ | ✅ | Direct URL access / popup entry |
 | Drag-to-dock positioning | ✅ | ✅ | `inject.ts` — snap to screen edges |
 | State persistence | ✅ | ✅ | localStorage for position/size/open state |
 | Keyboard shortcut | ✅ | ✅ | Alt+D toggle |
 | Multi-session support | ✅ | ✅ | Session list + switcher |
+
+### Dock Entry Types
+
+| Entry Type | vite-devtools | rs-devtools | Implementation |
+|------------|:---:|:---:|---|
+| `iframe` | ✅ | ✅ | Load URL in iframe panel |
+| `action` | ✅ | ✅ | Client script execution via imports map |
+| `custom-render` | ✅ | ✅ | Client script loads renderer into DOM panel |
+| `launcher` | ✅ | ✅ | Launcher UI with status + on-launch RPC |
+| `~builtin` | ✅ | ✅ | Core entries: ~logs, ~settings, ~popup |
+
+### Core Builtin Panels
+
+| Panel | vite-devtools | rs-devtools | Implementation |
+|-------|:---:|:---:|---|
+| Logs & Notifications | ✅ | ✅ | `DockLogs.vue` — search, filters, detail panel |
+| Settings | ✅ | ✅ | `DockSettings.vue` — dock visibility toggle |
+| Terminals | ✅ | ✅ | `DockTerminal.vue` — command execution |
+| Popup | ✅ | ✅ | Window.open to standalone mode |
+| Toast overlay | ✅ | ✅ | Inject script toast for `notify: true` logs |
+| Self Inspect | ✅ | ✅ | `DockSelfInspect.vue` — RPC, docks, scripts, plugins |
+
+### Logs System
+
+| Feature | vite-devtools | rs-devtools | Implementation |
+|---------|:---:|:---:|---|
+| Incremental sync | ✅ | ✅ | `lastModified` + `removals` + `_clock` version |
+| Server-side add/update/remove/clear | ✅ | ✅ | `DevToolsLogsHost` with event emitters |
+| Client-side add/remove/clear via RPC | ✅ | ✅ | `devtoolskit:internal:logs:*` RPC methods |
+| Client logs API for plugins | ✅ | ✅ | `createClientLogsClient()` in kit/client |
+| Toast notifications | ✅ | ✅ | Inject script WebSocket + toast overlay |
+| Auto-delete timers | ✅ | ✅ | `autoDelete` field on log entries |
+| FIFO eviction (MAX_ENTRIES=1000) | ✅ | ✅ | Oldest entry removed when limit reached |
 
 ### Developer Features
 
@@ -56,9 +91,23 @@ How rs-devtools maps to vite-devtools concepts for feature parity.
 | Open in editor | ✅ | ✅ | `launch-editor` via RPC |
 | Open in finder | ✅ | ✅ | `child_process.exec('open')` via RPC |
 | Terminal host | ✅ | ✅ | `terminal.ts` — `child_process.spawn` with PTY |
-| RPC system | ✅ | ✅ | `birpc` with 20 server functions |
-| Real-time updates | ✅ | ✅ | WebSocket broadcast on build completion |
+| RPC system | ✅ | ✅ | `birpc` with defineRpcFunction pattern |
+| Real-time updates | ✅ | ✅ | WebSocket broadcast on build/logs/terminals |
 | WebSocket reconnection | ✅ | ✅ | Client-side auto-reconnect with buffering |
+| File explorer | ✅ | ✅ | `DockExplorer.vue` — file tree with read/write |
+| Session compare | ✅ | ✅ | `Compare.vue` — multi-session metrics diff |
+| Client imports map | ✅ | ✅ | `/.devtools/client-imports.js` endpoint |
+| Shared state | ✅ | ✅ | `rpc.sharedState.get()` with `mutate/patch/on` |
+
+### Plugin System
+
+| Feature | vite-devtools | rs-devtools | Implementation |
+|---------|:---:|:---:|---|
+| `devtools.setup(ctx)` hook | ✅ | ✅ | Plugin discovery + context injection |
+| `devtools.capabilities` | ✅ | ✅ | `dev`/`build` mode capability filtering |
+| `defineRpcFunction` helper | ✅ | ✅ | `@rspack-devtools/kit` utility |
+| `ctx.docks.register()` | ✅ | ✅ | Full dock registry |
+| `ctx.views.hostStatic()` | ✅ | ✅ | Serve plugin static files |
 
 ## Key Differences
 
@@ -66,18 +115,15 @@ How rs-devtools maps to vite-devtools concepts for feature parity.
 - **vite-devtools**: Hooks into Vite/Rolldown's module graph directly via `ModuleGraph`, gets transform timing from plugin hooks
 - **rs-devtools**: Uses `stats.toJson()` which provides a snapshot after compilation; no per-transform timing data
 
-### Plugin System
-- **vite-devtools**: Has `@vitejs/devtools-kit` with `defineRpcFunction()`, typed shared state, dock registry, log system
-- **rs-devtools**: Direct implementation without a kit abstraction; RPC functions defined as object methods in `rpc.ts`
+### Client Rendering
+- **vite-devtools**: Web Component-based embedded client using Vue + ShadowDOM
+- **rs-devtools**: Vanilla JS inject script with iframe-based panel content; builtin panels are client routes loaded in iframes
 
 ### Client Framework
-- **vite-devtools**: Nuxt-based client with auto-imports, Nuxt modules, and Nuxt DevTools integration
+- **vite-devtools**: Nuxt-based client with auto-imports, Nuxt modules
 - **rs-devtools**: Vanilla Vue 3 + vue-router + Vite; simpler but less framework support
 
-## Migration Guide: Adding a vite-devtools Feature
-
-1. **Identify the feature** in vite-devtools source (usually in `packages/vite/` or `packages/rolldown/`)
-2. **Map the data source**: Find where vite-devtools gets data → find equivalent in Rspack Stats API
-3. **Add server-side**: Add RPC handler in `rpc.ts`, types in `types.ts`, data extraction in `collector.ts`
-4. **Add client-side**: Create Vue page in `packages/client/src/pages/`, register route
-5. **Test**: Build core (`pnpm build:core`), restart example (`npx rspack serve`)
+### Not Supported (Rspack limitations)
+- Per-transform timing data (Rspack does not expose individual transform hooks)
+- Rolldown-specific build events (Rspack uses stats.toJson() snapshots)
+- Vite middleware integration (rs-devtools runs on its own HTTP server)
