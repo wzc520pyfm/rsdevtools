@@ -209,13 +209,25 @@ export function getInjectClientScript(
     overflowBtnEl = document.createElement('button');
     overflowBtnEl.title = 'More (' + overflowDocks.length + ')';
     overflowBtnEl.style.cssText = 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;background:transparent;color:rgba(255,255,255,0.45);cursor:pointer;border-radius:12px;transition:all 300ms cubic-bezier(0.34,1.56,0.64,1);padding:0;position:relative;';
-    overflowBtnEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+    overflowBtnEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M128 24a104 104 0 10104 104A104.11 104.11 0 00128 24zm0 192a88 88 0 1188-88 88.1 88.1 0 01-88 88zm12-88a12 12 0 11-12-12 12 12 0 0112 12zm-44 0a12 12 0 11-12-12 12 12 0 0112 12zm88 0a12 12 0 11-12-12 12 12 0 0112 12z" opacity="0.85"/></svg>';
 
     var badge = document.createElement('span');
     var badgeText = overflowDocks.length > 9 ? '9+' : '' + overflowDocks.length;
     badge.textContent = badgeText;
-    badge.style.cssText = 'position:absolute;top:-2px;right:-2px;min-width:14px;height:14px;border-radius:7px;background:#a78bfa;color:white;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1;';
+    badge.style.cssText = 'position:absolute;min-width:12px;height:12px;border-radius:6px;background:#a78bfa;color:white;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 2px;line-height:1;';
     overflowBtnEl.appendChild(badge);
+
+    function updateBadgePosition() {
+      if (isVertical()) {
+        badge.style.top = '-2px'; badge.style.left = '-3px';
+        badge.style.right = 'auto'; badge.style.bottom = 'auto';
+        badge.style.transform = 'rotate(-90deg)';
+      } else {
+        badge.style.top = '-2px'; badge.style.right = '-3px';
+        badge.style.left = 'auto'; badge.style.bottom = 'auto';
+        badge.style.transform = 'none';
+      }
+    }
 
     overflowBtnEl.onmouseenter = function() {
       overflowBtnEl.style.color = 'rgba(255,255,255,0.85)';
@@ -232,10 +244,10 @@ export function getInjectClientScript(
     dockEntriesEl.appendChild(overflowBtnEl);
 
     overflowPopup = document.createElement('div');
-    overflowPopup.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:auto;display:none;padding:8px;border-radius:12px;background:rgba(17,17,17,0.92);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.5);max-width:220px;';
+    overflowPopup.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:auto;display:none;padding:4px;border-radius:10px;background:rgba(17,17,17,0.92);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 16px rgba(0,0,0,0.45);max-width:220px;';
 
     var overflowGrid = document.createElement('div');
-    overflowGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:0;';
+    overflowGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:0;justify-content:center;';
     overflowDocks.forEach(function(dock) {
       overflowGrid.appendChild(createDockButton(dock));
     });
@@ -257,23 +269,23 @@ export function getInjectClientScript(
     }
     overflowPopup.style.display = 'block';
     var rect = overflowBtnEl.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
     var p = store.position;
+    overflowPopup.style.left = 'auto'; overflowPopup.style.right = 'auto';
+    overflowPopup.style.top = 'auto'; overflowPopup.style.bottom = 'auto';
     if (p === 'left') {
-      overflowPopup.style.left = (rect.right + 8) + 'px';
-      overflowPopup.style.top = rect.top + 'px';
-      overflowPopup.style.right = 'auto'; overflowPopup.style.bottom = 'auto';
+      overflowPopup.style.left = (rect.right + 6) + 'px';
+      overflowPopup.style.top = (cy - 20) + 'px';
     } else if (p === 'right') {
-      overflowPopup.style.right = (window.innerWidth - rect.left + 8) + 'px';
-      overflowPopup.style.top = rect.top + 'px';
-      overflowPopup.style.left = 'auto'; overflowPopup.style.bottom = 'auto';
+      overflowPopup.style.right = (window.innerWidth - rect.left + 6) + 'px';
+      overflowPopup.style.top = (cy - 20) + 'px';
     } else if (p === 'top') {
-      overflowPopup.style.left = rect.left + 'px';
-      overflowPopup.style.top = (rect.bottom + 8) + 'px';
-      overflowPopup.style.right = 'auto'; overflowPopup.style.bottom = 'auto';
+      overflowPopup.style.left = (cx - 20) + 'px';
+      overflowPopup.style.top = (rect.bottom + 6) + 'px';
     } else {
-      overflowPopup.style.left = rect.left + 'px';
-      overflowPopup.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-      overflowPopup.style.right = 'auto'; overflowPopup.style.top = 'auto';
+      overflowPopup.style.left = (cx - 20) + 'px';
+      overflowPopup.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
     }
   }
 
@@ -594,6 +606,7 @@ export function getInjectClientScript(
     miniLogo.style.opacity = '1';
     bracketL.style.width = '6px'; bracketL.style.opacity = '0.5';
     bracketR.style.width = '6px'; bracketR.style.opacity = '0.5';
+    if (overflowPopup) overflowPopup.style.display = 'none';
   }
   function expand() {
     if (!isMinimized) return;
@@ -625,6 +638,7 @@ export function getInjectClientScript(
     else if (p === 'right') { anchor.style.left = (window.innerWidth - m - halfH) + 'px'; anchor.style.top = off + '%'; }
     else if (p === 'top') { anchor.style.left = off + '%'; anchor.style.top = (m + halfH) + 'px'; }
     else { anchor.style.left = off + '%'; anchor.style.top = (window.innerHeight - m - halfH) + 'px'; }
+    if (typeof updateBadgePosition === 'function') updateBadgePosition();
   }
 
   function positionPanel() {
