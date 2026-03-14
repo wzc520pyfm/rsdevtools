@@ -158,9 +158,14 @@ export function getInjectClientScript(
   var dockEntriesEl = document.createElement('div');
   dockEntriesEl.style.cssText = 'display:flex;align-items:center;width:100%;height:100%;justify-content:center;padding:0 12px;gap:0;transition:opacity 300ms;overflow:hidden;';
 
+  // ===== Split docks into visible & overflow (capacity-based, like vite-devtools) =====
+  var DOCK_CAPACITY = 5;
+  var visibleDocks = DOCKS.slice(0, DOCK_CAPACITY);
+  var overflowDocks = DOCKS.slice(DOCK_CAPACITY);
+
   // ===== Create dock buttons =====
   var dockButtons = [];
-  DOCKS.forEach(function(dock) {
+  function createDockButton(dock) {
     var btn = document.createElement('button');
     btn.title = dock.title;
     btn.dataset.dockId = dock.id;
@@ -185,8 +190,92 @@ export function getInjectClientScript(
     btn.onpointerdown = function(e) { e.stopPropagation(); };
     btn.onclick = function(e) { e.stopPropagation(); handleDockClick(dock); };
     dockButtons.push({ el: btn, dock: dock });
-    dockEntriesEl.appendChild(btn);
+    return btn;
+  }
+
+  visibleDocks.forEach(function(dock) {
+    dockEntriesEl.appendChild(createDockButton(dock));
   });
+
+  // ===== Overflow button & popup =====
+  var overflowPopup = null;
+  var overflowBtnEl = null;
+
+  if (overflowDocks.length > 0) {
+    var sep = document.createElement('div');
+    sep.style.cssText = 'width:1px;height:20px;background:rgba(255,255,255,0.1);margin:0 4px;flex-shrink:0;';
+    dockEntriesEl.appendChild(sep);
+
+    overflowBtnEl = document.createElement('button');
+    overflowBtnEl.title = 'More (' + overflowDocks.length + ')';
+    overflowBtnEl.style.cssText = 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;background:transparent;color:rgba(255,255,255,0.45);cursor:pointer;border-radius:12px;transition:all 300ms cubic-bezier(0.34,1.56,0.64,1);padding:0;position:relative;';
+    overflowBtnEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+
+    var badge = document.createElement('span');
+    var badgeText = overflowDocks.length > 9 ? '9+' : '' + overflowDocks.length;
+    badge.textContent = badgeText;
+    badge.style.cssText = 'position:absolute;top:-2px;right:-2px;min-width:14px;height:14px;border-radius:7px;background:#a78bfa;color:white;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1;';
+    overflowBtnEl.appendChild(badge);
+
+    overflowBtnEl.onmouseenter = function() {
+      overflowBtnEl.style.color = 'rgba(255,255,255,0.85)';
+      overflowBtnEl.style.background = 'rgba(136,136,136,0.07)';
+      overflowBtnEl.style.transform = 'scale(1.1)';
+    };
+    overflowBtnEl.onmouseleave = function() {
+      overflowBtnEl.style.color = 'rgba(255,255,255,0.45)';
+      overflowBtnEl.style.background = 'transparent';
+      overflowBtnEl.style.transform = 'scale(1)';
+    };
+    overflowBtnEl.onpointerdown = function(e) { e.stopPropagation(); };
+    overflowBtnEl.onclick = function(e) { e.stopPropagation(); toggleOverflowPopup(); };
+    dockEntriesEl.appendChild(overflowBtnEl);
+
+    overflowPopup = document.createElement('div');
+    overflowPopup.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:auto;display:none;padding:8px;border-radius:12px;background:rgba(17,17,17,0.92);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.5);max-width:220px;';
+
+    var overflowGrid = document.createElement('div');
+    overflowGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:0;';
+    overflowDocks.forEach(function(dock) {
+      overflowGrid.appendChild(createDockButton(dock));
+    });
+    overflowPopup.appendChild(overflowGrid);
+    root.appendChild(overflowPopup);
+
+    document.addEventListener('pointerdown', function(e) {
+      if (overflowPopup.style.display !== 'none' && !overflowPopup.contains(e.target) && e.target !== overflowBtnEl && !overflowBtnEl.contains(e.target)) {
+        overflowPopup.style.display = 'none';
+      }
+    });
+  }
+
+  function toggleOverflowPopup() {
+    if (!overflowPopup) return;
+    if (overflowPopup.style.display !== 'none') {
+      overflowPopup.style.display = 'none';
+      return;
+    }
+    overflowPopup.style.display = 'block';
+    var rect = overflowBtnEl.getBoundingClientRect();
+    var p = store.position;
+    if (p === 'left') {
+      overflowPopup.style.left = (rect.right + 8) + 'px';
+      overflowPopup.style.top = rect.top + 'px';
+      overflowPopup.style.right = 'auto'; overflowPopup.style.bottom = 'auto';
+    } else if (p === 'right') {
+      overflowPopup.style.right = (window.innerWidth - rect.left + 8) + 'px';
+      overflowPopup.style.top = rect.top + 'px';
+      overflowPopup.style.left = 'auto'; overflowPopup.style.bottom = 'auto';
+    } else if (p === 'top') {
+      overflowPopup.style.left = rect.left + 'px';
+      overflowPopup.style.top = (rect.bottom + 8) + 'px';
+      overflowPopup.style.right = 'auto'; overflowPopup.style.bottom = 'auto';
+    } else {
+      overflowPopup.style.left = rect.left + 'px';
+      overflowPopup.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+      overflowPopup.style.right = 'auto'; overflowPopup.style.top = 'auto';
+    }
+  }
 
   dockBar.appendChild(bracketL);
   dockBar.appendChild(bracketR);
