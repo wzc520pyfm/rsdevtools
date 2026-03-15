@@ -87,5 +87,22 @@ export function internalRpcDeclarations(): RpcFunctionDefinition[] {
         handler: async () => ctx.docks.values({ includeBuiltin: false }),
       }),
     },
+    {
+      name: 'devtoolskit:internal:terminals:list',
+      type: 'query',
+      setup: (ctx) => ({
+        handler: async () => ctx.terminals.list(),
+      }),
+    },
+    {
+      name: 'devtoolskit:internal:terminals:read',
+      type: 'query',
+      setup: (ctx) => ({
+        handler: async (id: string) => {
+          const session = ctx.terminals.sessions.get(id)
+          return session?.buffer ?? ''
+        },
+      }),
+    },
   ]
 }

@@ -85,6 +85,7 @@ export function getInjectClientScript(
 
   // Append builtin entries (aligned with vite-devtools core builtins)
   var BUILTIN_DOCKS = [
+    { id: '~terminals', title: 'Terminals', icon: 'ph:terminal-duotone', type: '~builtin', url: DEVTOOLS_URL + '/dock/terminals', category: '~builtin' },
     { id: '~logs', title: 'Logs & Notifications', icon: 'ph:notification-duotone', type: '~builtin', url: DEVTOOLS_URL + '/dock/logs', category: '~builtin' },
     { id: '~settings', title: 'Settings', icon: 'ph:gear-duotone', type: '~builtin', url: DEVTOOLS_URL + '/dock/settings', category: '~builtin' },
     { id: '~popup', title: 'Popup', icon: 'ph:arrow-square-out-duotone', type: '~popup', category: '~builtin' },

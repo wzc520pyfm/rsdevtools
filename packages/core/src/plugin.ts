@@ -55,7 +55,7 @@ export class RspackDevToolsPlugin {
 
           if (this.options.builtinDevTools !== false) {
             builtinPlugins.push(DevToolsRspackUI({ collector: this.collector }))
-            builtinPlugins.push(DevToolsSelfInspect())
+            builtinPlugins.push(DevToolsSelfInspect({ clientBaseUrl: '/.devtools-rspack' }))
           }
 
           const allPlugins = [

@@ -21,6 +21,15 @@ export interface ServerFunctions {
   'rspack:compare-sessions': (args: { sessions: string[] }) => Promise<SessionComparison | null>
   'rspack:open-in-editor': (args: { path: string; line?: number; column?: number }) => Promise<void>
   'rspack:open-in-finder': (args: { path: string }) => Promise<void>
+  'devtoolskit:internal:logs:list': (since?: number) => Promise<{ entries: any[]; removedIds: string[]; version: number }>
+  'devtoolskit:internal:logs:clear': () => Promise<void>
+  'devtoolskit:internal:logs:remove': (id: string) => Promise<void>
+  'devtoolskit:internal:terminals:list': () => Promise<any[]>
+  'devtoolskit:internal:terminals:read': (id: string) => Promise<string>
+  'devtoolskit:self-inspect:get-rpc-functions': () => Promise<Array<{ name: string; type: string }>>
+  'devtoolskit:self-inspect:get-docks': () => Promise<any[]>
+  'devtoolskit:self-inspect:get-client-scripts': () => Promise<any[]>
+  'devtoolskit:self-inspect:get-devtools-plugins': () => Promise<any[]>
 }
 
 export interface ClientFunctions {

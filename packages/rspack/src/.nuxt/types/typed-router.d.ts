@@ -37,6 +37,34 @@ declare module 'vue-router/auto-routes' {
       { sessions: ParamValue<false> },
       | never
     >,
+    'dock-logs': RouteRecordInfo<
+      'dock-logs',
+      '/dock/logs',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    'dock-self-inspect': RouteRecordInfo<
+      'dock-self-inspect',
+      '/dock/self-inspect',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    'dock-settings': RouteRecordInfo<
+      'dock-settings',
+      '/dock/settings',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    'dock-terminals': RouteRecordInfo<
+      'dock-terminals',
+      '/dock/terminals',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     'session-session': RouteRecordInfo<
       'session-session',
       '/session/:session()',
@@ -113,6 +141,30 @@ declare module 'vue-router/auto-routes' {
     'src/app/pages/compare/[sessions]/index.vue': {
       routes:
         | 'compare-sessions'
+      views:
+        | never
+    }
+    'src/app/pages/dock/logs.vue': {
+      routes:
+        | 'dock-logs'
+      views:
+        | never
+    }
+    'src/app/pages/dock/self-inspect.vue': {
+      routes:
+        | 'dock-self-inspect'
+      views:
+        | never
+    }
+    'src/app/pages/dock/settings.vue': {
+      routes:
+        | 'dock-settings'
+      views:
+        | never
+    }
+    'src/app/pages/dock/terminals.vue': {
+      routes:
+        | 'dock-terminals'
       views:
         | never
     }
