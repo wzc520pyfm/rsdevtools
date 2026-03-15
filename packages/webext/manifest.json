@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Rspack DevTools",
+  "version": "0.0.1",
+  "description": "Browser DevTools extension for Rspack (WIP)",
+  "permissions": [],
+  "devtools_page": "devtools.html"
+}

@@ -4,10 +4,12 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
+    "build:rpc": "pnpm --filter @rspack-devtools/rpc build",
     "build:kit": "pnpm --filter @rspack-devtools/kit build",
-    "build:client": "pnpm --filter @rspack-devtools/client build",
+    "build:rspack": "pnpm --filter @rspack-devtools/rspack build",
+    "build:self-inspect": "pnpm --filter @rspack-devtools/self-inspect build",
     "build:core": "pnpm --filter @rspack-devtools/core build",
-    "dev:client": "pnpm --filter @rspack-devtools/client dev",
+    "dev:rspack": "pnpm --filter @rspack-devtools/rspack dev",
     "example:build": "pnpm --filter rspack-devtools-example build",
     "playground": "pnpm --filter rspack-devtools-playground dev",
     "playground:build": "pnpm --filter rspack-devtools-playground build"

@@ -1,0 +1,14 @@
+{
+  "name": "@rspack-devtools/webext",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "DevTools browser extension for Rspack (work in progress)",
+  "license": "MIT",
+  "scripts": {
+    "build": "echo 'WIP - not yet implemented'"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

@@ -5,5 +5,11 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   clean: true,
-  external: ['@rspack/core', '@rspack-devtools/kit'],
+  external: [
+    '@rspack/core',
+    '@rspack-devtools/kit',
+    '@rspack-devtools/rpc',
+    '@rspack-devtools/rspack',
+    '@rspack-devtools/self-inspect',
+  ],
 })

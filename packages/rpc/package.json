@@ -1,0 +1,62 @@
+{
+  "name": "@rspack-devtools/rpc",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "DevTools RPC Layer for Rspack",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client.js",
+      "types": "./dist/client.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server.js",
+      "types": "./dist/server.d.ts"
+    },
+    "./presets": {
+      "import": "./dist/presets/index.js",
+      "types": "./dist/presets/index.d.ts"
+    },
+    "./presets/ws/client": {
+      "import": "./dist/presets/ws/client.js",
+      "types": "./dist/presets/ws/client.d.ts"
+    },
+    "./presets/ws/server": {
+      "import": "./dist/presets/ws/server.js",
+      "types": "./dist/presets/ws/server.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "ws": "*"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "birpc": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.14",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "ws": "^8.18.0"
+  }
+}

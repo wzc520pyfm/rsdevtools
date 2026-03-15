@@ -60,7 +60,7 @@ export function getInjectClientScript(
   // ===== Build dock entries =====
   var DOCKS = REGISTERED_DOCKS.map(function(d) {
     var entry = { id: d.id, title: d.title, icon: d.icon, type: d.type, category: d.category || 'default' };
-    if (d.type === 'iframe') entry.url = d.url || DEVTOOLS_URL;
+    if (d.type === 'iframe') entry.url = d.url ? (d.url.indexOf('://') > -1 ? d.url : DEVTOOLS_URL + d.url) : DEVTOOLS_URL;
     if (d.type === 'launcher') entry.launcher = d.launcher;
     if (d.type === 'action') entry.action = d.action;
     if (d.type === 'custom-render') entry.renderer = d.renderer;
@@ -75,7 +75,6 @@ export function getInjectClientScript(
   var BUILTIN_DOCKS = [
     { id: '~logs', title: 'Logs & Notifications', icon: 'ph:notification-duotone', type: '~builtin', url: DEVTOOLS_URL + '/dock/logs', category: '~builtin' },
     { id: '~settings', title: 'Settings', icon: 'ph:gear-duotone', type: '~builtin', url: DEVTOOLS_URL + '/dock/settings', category: '~builtin' },
-    { id: '~self-inspect', title: 'Self Inspect', icon: 'ph:stethoscope-duotone', type: '~builtin', url: DEVTOOLS_URL + '/dock/self-inspect', category: '~builtin' },
     { id: '~popup', title: 'Popup', icon: 'ph:arrow-square-out-duotone', type: '~popup', category: '~builtin' },
   ];
   DOCKS = DOCKS.concat(BUILTIN_DOCKS);

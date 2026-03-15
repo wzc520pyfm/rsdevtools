@@ -2,9 +2,9 @@ import type { Compiler } from '@rspack/core'
 import type { DevToolsNodeContext } from '@rspack-devtools/kit'
 import type { RspackDevToolsOptions } from './types'
 import type { DevToolsServer } from './server'
-import { DataCollector } from './collector'
+import { DevToolsRspackUI, DataCollector } from '@rspack-devtools/rspack'
+import { DevToolsSelfInspect } from '@rspack-devtools/self-inspect'
 import { createDevToolsContext } from './context'
-import { setupBuiltinBuildAnalysis } from './builtin-plugin'
 import { startDevToolsServer } from './server'
 
 export class RspackDevToolsPlugin {
@@ -51,19 +51,26 @@ export class RspackDevToolsPlugin {
 
       if (!server) {
         try {
+          const builtinPlugins: any[] = []
+
+          if (this.options.builtinDevTools !== false) {
+            builtinPlugins.push(DevToolsRspackUI({ collector: this.collector }))
+            builtinPlugins.push(DevToolsSelfInspect())
+          }
+
+          const allPlugins = [
+            ...builtinPlugins,
+            ...(compiler.options.plugins ?? []),
+          ]
+
           context = await createDevToolsContext({
             cwd: compiler.options.context ?? process.cwd(),
-            plugins: compiler.options.plugins ?? [],
-            collector: this.collector,
+            plugins: allPlugins,
             options: this.options,
           })
 
           server = await startDevToolsServer(context, this.options)
           const url = `http://${this.options.host ?? 'localhost'}:${server.port}`
-
-          if (this.options.builtinDevTools !== false) {
-            setupBuiltinBuildAnalysis(context, url)
-          }
 
           console.log()
           console.log(`  \x1B[36m\x1B[1m⬢ Rspack DevTools\x1B[0m`)

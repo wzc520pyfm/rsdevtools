@@ -3,17 +3,27 @@ import type { WebSocket as WsWebSocket } from 'ws'
 import type { DevToolsNodeContext } from '@rspack-devtools/kit'
 import type { ConnectionMeta, RspackDevToolsOptions } from './types'
 import { createServer } from 'node:http'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createBirpc } from 'birpc'
 import { getPort } from 'get-port-please'
 import sirv from 'sirv'
 import { WebSocketServer } from 'ws'
+import { clientPublicDir as rspackClientDir } from '@rspack-devtools/rspack/dirs'
 import { getInjectClientScript } from './inject'
 import { RpcFunctionsHost } from './hosts/rpc-host'
 import { DevToolsViewHost } from './hosts/view-host'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function resolveClientDir(optionsClientDir?: string): string {
+  if (optionsClientDir) return optionsClientDir
+
+  if (existsSync(rspackClientDir)) return rspackClientDir
+
+  return path.resolve(__dirname, '../client')
+}
 
 function renderClientImportsMap(context: DevToolsNodeContext): string {
   const entries = context.docks.values({ includeBuiltin: false })
@@ -70,7 +80,7 @@ export async function startDevToolsServer(
     }
   })
 
-  const clientDir = options.clientDir ?? path.resolve(__dirname, '../client')
+  const clientDir = resolveClientDir(options.clientDir)
   const serveStatic = sirv(clientDir, { dev: true, single: true })
 
   const pluginStaticHandlers: Array<{ baseUrl: string; handler: ReturnType<typeof sirv> }> = []

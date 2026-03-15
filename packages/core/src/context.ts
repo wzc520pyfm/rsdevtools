@@ -1,12 +1,11 @@
 import type { DevToolsNodeContext, DevToolsPluginOptions } from '@rspack-devtools/kit'
-import type { DataCollector } from './collector'
 import type { RspackDevToolsOptions } from './types'
 import { DevToolsDockHost } from './hosts/dock-host'
 import { DevToolsLogsHost } from './hosts/logs-host'
 import { RpcFunctionsHost } from './hosts/rpc-host'
 import { DevToolsTerminalHost } from './hosts/terminal-host'
 import { DevToolsViewHost } from './hosts/view-host'
-import { builtinRpcDeclarations } from './builtin-rpc'
+import { internalRpcDeclarations } from './rpc/internal'
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -25,14 +24,13 @@ function shouldSkipSetupByCapabilities(
 export interface CreateContextOptions {
   cwd: string
   plugins: any[]
-  collector: DataCollector
   options: RspackDevToolsOptions
 }
 
 export async function createDevToolsContext(
   opts: CreateContextOptions,
 ): Promise<DevToolsNodeContext> {
-  const { cwd, plugins, collector, options } = opts
+  const { cwd, plugins } = opts
 
   const context: DevToolsNodeContext = {
     cwd,
@@ -57,7 +55,7 @@ export async function createDevToolsContext(
   context.terminals = terminalsHost
   context.logs = logsHost
 
-  for (const fn of builtinRpcDeclarations(collector, terminalsHost)) {
+  for (const fn of internalRpcDeclarations()) {
     rpcHost.register(fn)
   }
 
