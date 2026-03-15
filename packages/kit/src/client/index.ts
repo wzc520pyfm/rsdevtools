@@ -62,7 +62,10 @@ export async function getDevToolsRpcClient(options?: {
   if (meta.backend === 'websocket') {
     const { createBirpc } = await import('birpc')
     const port = meta.websocket ?? location.port
-    const ws = new WebSocket(`ws://${location.hostname}:${port}`)
+    const params = new URLSearchParams(location.search)
+    const authId = params.get('rspack_devtools_auth_id') ?? ''
+    const authQuery = authId ? `?rspack_devtools_auth_id=${encodeURIComponent(authId)}` : ''
+    const ws = new WebSocket(`ws://${location.hostname}:${port}${authQuery}`)
 
     return new Promise((resolve, reject) => {
       ws.onopen = () => {

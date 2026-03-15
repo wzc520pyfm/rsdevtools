@@ -40,6 +40,17 @@ export interface RspackDevToolsOptions {
    * @default true
    */
   builtinDevTools?: boolean
+  /**
+   * Enable client authentication.
+   *
+   * When enabled, browsers must be authorized via a terminal prompt before
+   * they can access DevTools RPC methods (file system, terminal, etc.).
+   *
+   * Can also be disabled via the `RSPACK_DEVTOOLS_DISABLE_CLIENT_AUTH` env variable.
+   *
+   * @default true
+   */
+  clientAuth?: boolean
 }
 
 // ---- Terminal ----

@@ -42,6 +42,7 @@ export function getInjectClientScript(
   port: number,
   host: string = 'localhost',
   dockEntries: DevToolsDockUserEntry[] = [],
+  clientAuth: boolean = true,
 ): string {
   const devtoolsUrl = `http://${host}:${port}`
   const serializedDocks = JSON.stringify(serializeDocks(dockEntries))
@@ -55,7 +56,18 @@ export function getInjectClientScript(
   var DEVTOOLS_URL = '${devtoolsUrl}';
   var WS_PORT = ${port};
   var STORAGE_KEY = 'rspack-devtools-dock-state';
+  var CLIENT_AUTH_ENABLED = ${clientAuth ? 'true' : 'false'};
   var REGISTERED_DOCKS = ${serializedDocks};
+
+  // ===== Auth ID =====
+  var AUTH_KEY = 'rspack-devtools-auth-id';
+  var authId = '';
+  try { authId = localStorage.getItem(AUTH_KEY) || ''; } catch(e) {}
+  if (!authId) {
+    authId = 'RDT' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36);
+    try { localStorage.setItem(AUTH_KEY, authId); } catch(e) {}
+  }
+  var isRpcTrusted = !CLIENT_AUTH_ENABLED;
 
   // ===== Build dock entries =====
   var DOCKS = REGISTERED_DOCKS.map(function(d) {
@@ -192,8 +204,52 @@ export function getInjectClientScript(
     return btn;
   }
 
+  // ===== Unauthorized badge (shown when client auth is enabled and not yet trusted) =====
+  var authBadge = null;
+  var dockButtonElements = [];
+  var overflowSeparator = null;
+
+  if (CLIENT_AUTH_ENABLED) {
+    authBadge = document.createElement('button');
+    authBadge.id = 'rspack-devtools-auth-badge';
+    authBadge.textContent = 'Unauthorized';
+    authBadge.style.cssText = 'display:flex;align-items:center;height:24px;border:none;background:rgba(239,68,68,0.15);color:#ef4444;cursor:pointer;border-radius:6px;padding:0 8px;font-size:11px;font-weight:600;margin-right:4px;transition:all 200ms;white-space:nowrap;';
+    authBadge.onmouseenter = function() { authBadge.style.background = 'rgba(239,68,68,0.25)'; showTooltip(authBadge, 'Click to authorize'); };
+    authBadge.onmouseleave = function() { authBadge.style.background = 'rgba(239,68,68,0.15)'; hideTooltip(); };
+    authBadge.onpointerdown = function(e) { e.stopPropagation(); };
+    authBadge.onclick = function(e) {
+      e.stopPropagation();
+      openPanel({ id: '~auth-notice', title: 'Unauthorized', icon: '', type: '~builtin' });
+      showPanelContent('auth-notice');
+    };
+    if (!isRpcTrusted) {
+      dockEntriesEl.appendChild(authBadge);
+    }
+  }
+
+  function setDockButtonsVisible(visible) {
+    var display = visible ? 'flex' : 'none';
+    dockButtonElements.forEach(function(el) { el.style.display = display; });
+    if (overflowSeparator) overflowSeparator.style.display = display;
+    if (overflowBtnEl) overflowBtnEl.style.display = display;
+  }
+
+  function updateAuthUI() {
+    if (!authBadge) return;
+    if (isRpcTrusted) {
+      if (authBadge.parentNode) authBadge.parentNode.removeChild(authBadge);
+      setDockButtonsVisible(true);
+      if (store.open && store.selectedDock === '~auth-notice') closePanel();
+    } else {
+      if (!authBadge.parentNode) dockEntriesEl.insertBefore(authBadge, dockEntriesEl.firstChild);
+      setDockButtonsVisible(false);
+    }
+  }
+
   visibleDocks.forEach(function(dock) {
-    dockEntriesEl.appendChild(createDockButton(dock));
+    var btn = createDockButton(dock);
+    dockButtonElements.push(btn);
+    dockEntriesEl.appendChild(btn);
   });
 
   // ===== Overflow button & popup =====
@@ -203,6 +259,7 @@ export function getInjectClientScript(
   if (overflowDocks.length > 0) {
     var sep = document.createElement('div');
     sep.style.cssText = 'width:1px;height:20px;background:rgba(255,255,255,0.1);margin:0 4px;flex-shrink:0;';
+    overflowSeparator = sep;
     dockEntriesEl.appendChild(sep);
 
     overflowBtnEl = document.createElement('button');
@@ -369,10 +426,27 @@ export function getInjectClientScript(
   var panelCustom = document.createElement('div');
   panelCustom.style.cssText = 'width:100%;display:none;overflow:auto;';
 
+  var panelAuthNotice = document.createElement('div');
+  panelAuthNotice.style.cssText = 'width:100%;display:none;padding:60px 40px;text-align:center;color:rgba(255,255,255,0.8);overflow:auto;';
+  panelAuthNotice.innerHTML = [
+    '<div style="margin-bottom:20px;font-size:48px;">&#x26A0;&#xFE0F;</div>',
+    '<h2 style="font-size:20px;font-weight:700;color:rgba(255,255,255,0.95);margin:0 0 12px;">Rspack DevTools is Unauthorized</h2>',
+    '<p style="color:rgba(255,255,255,0.55);font-size:14px;line-height:1.6;max-width:420px;margin:0 auto 12px;">',
+    'Rspack DevTools offers advanced features that can access your server, view your filesystem, and execute commands.',
+    '</p>',
+    '<p style="color:rgba(255,255,255,0.55);font-size:14px;line-height:1.6;max-width:420px;margin:0 auto 24px;">',
+    'To protect your project from unauthorized access, please authorize your browser before proceeding.',
+    '</p>',
+    '<div style="display:inline-block;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:12px 24px;">',
+    '<p style="color:#22c55e;font-weight:600;font-size:13px;margin:0;">Check your terminal for the authorization prompt and come back.</p>',
+    '</div>',
+  ].join('');
+
   panel.appendChild(panelHeader);
   panel.appendChild(panelIframe);
   panel.appendChild(panelLauncher);
   panel.appendChild(panelCustom);
+  panel.appendChild(panelAuthNotice);
 
   // ===== Toast overlay =====
   var toastContainer = document.createElement('div');
@@ -420,17 +494,45 @@ export function getInjectClientScript(
   root.appendChild(toastContainer);
   document.body.appendChild(root);
 
-  // ===== WebSocket for log notifications =====
+  // ===== WebSocket for log notifications + auth =====
   var wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+  var rpcReqCounter = 0;
+  function nextRpcId() { return 'rdt-' + (++rpcReqCounter) + '-' + Date.now(); }
+
+  function requestAuth(ws) {
+    if (!CLIENT_AUTH_ENABLED || isRpcTrusted) return;
+    var rid = nextRpcId();
+    try {
+      var ua = navigator.userAgent || 'Unknown';
+      ws.send(JSON.stringify({ m: 'rspack:anonymous:auth', a: [{ authId: authId, ua: ua, origin: location.origin }], t: 'q', i: rid }));
+      var handler = function(e) {
+        try {
+          var msg = JSON.parse(e.data);
+          if (msg.t === 's' && msg.i === rid) {
+            ws.removeEventListener('message', handler);
+            if (msg.r && msg.r.isTrusted) {
+              isRpcTrusted = true;
+              updateAuthUI();
+            }
+          }
+        } catch(ex) {}
+      };
+      ws.addEventListener('message', handler);
+    } catch(ex) {}
+  }
+
   function connectWs() {
     try {
-      var ws = new WebSocket(wsProtocol + '//' + '${host}' + ':' + WS_PORT);
-      var reqId = 0;
+      var wsUrl = wsProtocol + '//' + '${host}' + ':' + WS_PORT;
+      if (CLIENT_AUTH_ENABLED) wsUrl += '?rspack_devtools_auth_id=' + encodeURIComponent(authId);
+      var ws = new WebSocket(wsUrl);
+      ws.onopen = function() { requestAuth(ws); };
       ws.onmessage = function(e) {
         try {
           var msg = JSON.parse(e.data);
-          if (msg.m === 'devtoolskit:internal:logs:updated') {
-            fetchNewLogs(ws, reqId);
+          if (msg.t === 'q' && msg.m === 'devtoolskit:internal:logs:updated' && isRpcTrusted) {
+            fetchNewLogs(ws);
           }
         } catch(ex) {}
       };
@@ -440,18 +542,18 @@ export function getInjectClientScript(
   }
 
   var lastLogVersion;
-  function fetchNewLogs(ws, startReqId) {
-    var tid = 'toast-' + (++startReqId);
+  function fetchNewLogs(ws) {
+    var rid = nextRpcId();
     try {
-      ws.send(JSON.stringify({ m: 'devtoolskit:internal:logs:list', a: [lastLogVersion], t: tid }));
+      ws.send(JSON.stringify({ m: 'devtoolskit:internal:logs:list', a: [lastLogVersion], t: 'q', i: rid }));
       var handler = function(e) {
         try {
           var msg = JSON.parse(e.data);
-          if (msg.t === tid && msg.d) {
+          if (msg.t === 's' && msg.i === rid && msg.r) {
             ws.removeEventListener('message', handler);
-            lastLogVersion = msg.d.version;
-            if (msg.d.entries) {
-              msg.d.entries.forEach(function(entry) {
+            lastLogVersion = msg.r.version;
+            if (msg.r.entries) {
+              msg.r.entries.forEach(function(entry) {
                 if (entry.notify) addToast(entry);
               });
             }
@@ -469,6 +571,7 @@ export function getInjectClientScript(
     panelIframe.style.display = (type === 'iframe' || type === '~builtin') ? 'block' : 'none';
     panelLauncher.style.display = type === 'launcher' ? 'block' : 'none';
     panelCustom.style.display = type === 'custom-render' ? 'block' : 'none';
+    panelAuthNotice.style.display = type === 'auth-notice' ? 'block' : 'none';
   }
 
   function renderLauncher(dock) {
@@ -509,6 +612,13 @@ export function getInjectClientScript(
   function handleDockClick(dock) {
     if (!dock) return;
 
+    // When not trusted, intercept all dock clicks and show auth notice
+    if (CLIENT_AUTH_ENABLED && !isRpcTrusted && dock.id !== '~auth-notice') {
+      openPanel({ id: '~auth-notice', title: 'Unauthorized', icon: '', type: '~builtin' });
+      showPanelContent('auth-notice');
+      return;
+    }
+
     if (dock.type === '~popup') {
       window.open(DEVTOOLS_URL, 'rspack-devtools', 'width=1200,height=800');
       return;
@@ -528,6 +638,12 @@ export function getInjectClientScript(
     openPanel(dock);
   }
 
+  function appendAuthParam(url) {
+    if (!CLIENT_AUTH_ENABLED || !authId) return url;
+    var sep = url.indexOf('?') > -1 ? '&' : '?';
+    return url + sep + 'rspack_devtools_auth_id=' + encodeURIComponent(authId);
+  }
+
   function openPanel(dock) {
     store.open = true;
     store.selectedDock = dock.id;
@@ -537,7 +653,9 @@ export function getInjectClientScript(
     requestAnimationFrame(function() { panel.style.opacity = '1'; panel.style.transform = 'none'; });
     panelTitle.textContent = dock.title;
 
-    if (dock.type === 'launcher') {
+    if (dock.id === '~auth-notice') {
+      showPanelContent('auth-notice');
+    } else if (dock.type === 'launcher') {
       showPanelContent('launcher');
       renderLauncher(dock);
     } else if (dock.type === 'custom-render') {
@@ -546,6 +664,7 @@ export function getInjectClientScript(
     } else {
       showPanelContent('iframe');
       var url = dock.url || DEVTOOLS_URL;
+      url = appendAuthParam(url);
       if (panelIframe.src !== url) panelIframe.src = url;
     }
 
@@ -647,22 +766,22 @@ export function getInjectClientScript(
       panel.style.left = m+'px'; panel.style.top = m+'px';
       panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
       panelIframe.style.height = 'calc(100vh - '+(m*2+36)+'px)';
-      panelLauncher.style.height = panelCustom.style.height = panelIframe.style.height;
+      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else if (p === 'right') {
       panel.style.right = m+'px'; panel.style.top = m+'px';
       panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
       panelIframe.style.height = 'calc(100vh - '+(m*2+36)+'px)';
-      panelLauncher.style.height = panelCustom.style.height = panelIframe.style.height;
+      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else if (p === 'bottom') {
       panel.style.left = m+'px'; panel.style.bottom = m+'px';
       panel.style.width = 'calc(100vw - '+(m*2)+'px)'; panel.style.height = h+'vh';
       panelIframe.style.height = 'calc('+h+'vh - 36px)';
-      panelLauncher.style.height = panelCustom.style.height = panelIframe.style.height;
+      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else {
       panel.style.left = m+'px'; panel.style.top = m+'px';
       panel.style.width = 'calc(100vw - '+(m*2)+'px)'; panel.style.height = h+'vh';
       panelIframe.style.height = 'calc('+h+'vh - 36px)';
-      panelLauncher.style.height = panelCustom.style.height = panelIframe.style.height;
+      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     }
   }
 
@@ -727,14 +846,17 @@ export function getInjectClientScript(
   // ===== Init =====
   positionAnchor();
   updateDockButtons();
+  if (CLIENT_AUTH_ENABLED && !isRpcTrusted) {
+    setDockButtonsVisible(false);
+  }
   if (store.open && store.selectedDock) {
     var initDock = DOCKS.find(function(d) { return d.id === store.selectedDock; });
-    if (initDock) openPanel(initDock);
+    if (initDock && (isRpcTrusted || !CLIENT_AUTH_ENABLED)) openPanel(initDock);
   }
   resetInactiveTimer();
 })();`
 }
 
-export function getInjectScript(port: number, host: string = 'localhost', dockEntries: DevToolsDockUserEntry[] = []): string {
-  return `<script>${getInjectClientScript(port, host, dockEntries)}</script>`
+export function getInjectScript(port: number, host: string = 'localhost', dockEntries: DevToolsDockUserEntry[] = [], clientAuth: boolean = true): string {
+  return `<script>${getInjectClientScript(port, host, dockEntries, clientAuth)}</script>`
 }

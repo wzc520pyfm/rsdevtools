@@ -93,11 +93,27 @@ export function useRpc() {
   }
 }
 
+function getAuthId(): string {
+  const key = 'rspack-devtools-auth-id'
+  let id = ''
+  try { id = localStorage.getItem(key) ?? '' } catch {}
+  if (!id) {
+    const params = new URLSearchParams(location.search)
+    id = params.get('rspack_devtools_auth_id') ?? ''
+  }
+  if (!id) {
+    id = `RDT${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36)}`
+  }
+  try { localStorage.setItem(key, id) } catch {}
+  return id
+}
+
 function initRpc() {
   readyPromise = new Promise(r => { readyResolve = r })
 
   const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const wsUrl = `${wsProtocol}//${location.host}`
+  const aid = getAuthId()
+  const wsUrl = `${wsProtocol}//${location.host}?rspack_devtools_auth_id=${encodeURIComponent(aid)}`
   const ws = new WebSocket(wsUrl)
 
   let pendingMessages: string[] = []

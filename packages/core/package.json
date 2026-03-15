@@ -20,10 +20,12 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
+    "@clack/prompts": "^0.9.1",
     "@rspack-devtools/kit": "workspace:*",
     "@rspack-devtools/rpc": "workspace:*",
     "@rspack-devtools/rspack": "workspace:*",
     "@rspack-devtools/self-inspect": "workspace:*",
+    "ansis": "^3.17.0",
     "birpc": "^2.3.0",
     "get-port-please": "^3.1.2",
     "sirv": "^3.0.1",

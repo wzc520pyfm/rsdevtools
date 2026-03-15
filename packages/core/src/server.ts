@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { WebSocket as WsWebSocket } from 'ws'
 import type { DevToolsNodeContext } from '@rspack-devtools/kit'
+import type { AuthInput, ConnectionAuthMeta } from './auth'
 import type { ConnectionMeta, RspackDevToolsOptions } from './types'
 import { createServer } from 'node:http'
 import { existsSync } from 'node:fs'
@@ -11,6 +12,7 @@ import { getPort } from 'get-port-please'
 import sirv from 'sirv'
 import { WebSocketServer } from 'ws'
 import { clientPublicDir as rspackClientDir } from '@rspack-devtools/rspack/dirs'
+import { ANONYMOUS_SCOPE, AUTH_METHOD, AuthStorage, extractAuthIdFromRequest, isClientAuthDisabledByEnv, promptAuth } from './auth'
 import { getInjectClientScript } from './inject'
 import { RpcFunctionsHost } from './hosts/rpc-host'
 import { DevToolsViewHost } from './hosts/view-host'
@@ -83,6 +85,13 @@ export async function startDevToolsServer(
   const clientDir = resolveClientDir(options.clientDir)
   const serveStatic = sirv(clientDir, { dev: true, single: true })
 
+  const clientAuthDisabled = options.clientAuth === false || isClientAuthDisabledByEnv()
+  const authStorage = clientAuthDisabled ? null : new AuthStorage(context.cwd)
+
+  if (clientAuthDisabled) {
+    console.warn('[Rspack DevTools] Client authentication is disabled. Any browser can connect to the devtools and access to your server and filesystem.')
+  }
+
   const pluginStaticHandlers: Array<{ baseUrl: string; handler: ReturnType<typeof sirv> }> = []
   for (const dir of viewHost.staticDirs) {
     pluginStaticHandlers.push({
@@ -99,7 +108,7 @@ export async function startDevToolsServer(
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
       res.setHeader('Access-Control-Allow-Origin', '*')
       res.setHeader('Cache-Control', 'no-cache')
-      res.end(getInjectClientScript(port, host, currentDocks))
+      res.end(getInjectClientScript(port, host, currentDocks, !clientAuthDisabled))
       return
     }
 
@@ -179,9 +188,41 @@ export async function startDevToolsServer(
 
   const wss = new WebSocketServer({ server: httpServer })
 
-  wss.on('connection', (ws: WsWebSocket) => {
+  wss.on('connection', (ws: WsWebSocket, req: IncomingMessage) => {
+    const authId = extractAuthIdFromRequest(req)
+    const meta: ConnectionAuthMeta = {
+      isTrusted: clientAuthDisabled || (authId && authStorage ? authStorage.isTrusted(authId) : false),
+      authId,
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[Rspack DevTools] WebSocket client connected [${authId ?? 'anonymous'}] [${meta.isTrusted ? 'trusted' : 'untrusted'}]`)
+
+    const wrappedHandlers: Record<string, (...args: any[]) => any> = {}
+
+    for (const [name, handler] of Object.entries(resolvedHandlers)) {
+      if (clientAuthDisabled || name.startsWith(ANONYMOUS_SCOPE)) {
+        wrappedHandlers[name] = handler
+      }
+      else {
+        wrappedHandlers[name] = (...args: any[]) => {
+          if (!meta.isTrusted) {
+            throw new Error(`Unauthorized access to method "${name}"`)
+          }
+          return handler(...args)
+        }
+      }
+    }
+
+    wrappedHandlers[AUTH_METHOD] = async (query: AuthInput) => {
+      if (clientAuthDisabled) {
+        meta.isTrusted = true
+        return { isTrusted: true }
+      }
+      return promptAuth(authStorage!, meta, query)
+    }
+
     const rpc = createBirpc<Record<string, any>, Record<string, any>>(
-      resolvedHandlers,
+      wrappedHandlers,
       {
         post: (data) => {
           if (ws.readyState === ws.OPEN) ws.send(data)
