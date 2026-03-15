@@ -1,14 +1,29 @@
+export function formatDuration(ms: number | null | undefined): string[]
+export function formatDuration(ms: number | null | undefined, stringify: true): string
+export function formatDuration(ms: number | null | undefined, stringify: false): string[]
+export function formatDuration(ms: number | null | undefined, stringify?: boolean): string | string[] {
+  let duration = []
+
+  if (ms == null)
+    duration = ['', '-']
+  else if (ms < 1)
+    duration = ['<1', 'ms']
+  else if (ms < 1000)
+    duration = [ms.toFixed(0), 'ms']
+  else if (ms < 1000 * 60)
+    duration = [(ms / 1000).toFixed(1), 's']
+  else
+    duration = [(ms / 1000 / 60).toFixed(1), 'min']
+
+  return stringify ? duration.join(' ') : duration
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
-}
-
-export function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(2)}s`
 }
 
 export function shortenPath(path: string): string {

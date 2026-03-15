@@ -31,7 +31,9 @@
   "main": "./src/index.ts",
   "module": "./src/index.ts",
   "peerDependencies": {
+    "@vueuse/core": "*",
     "unocss": "*",
-    "vue": "*"
+    "vue": "*",
+    "vue-virtual-scroller": ">=2.0.0-beta.0"
   }
 }

@@ -1,0 +1,20 @@
+.splitpanes__splitter {
+  background: transparent;
+  position: relative;
+}
+
+.splitpanes--vertical > .splitpanes__splitter {
+  width: 4px;
+  min-width: 4px;
+  cursor: col-resize;
+}
+
+.splitpanes--horizontal > .splitpanes__splitter {
+  height: 4px;
+  min-height: 4px;
+  cursor: row-resize;
+}
+
+.splitpanes__splitter:hover {
+  background: rgba(128, 128, 128, 0.2);
+}

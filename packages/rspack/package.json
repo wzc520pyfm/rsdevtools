@@ -6,49 +6,60 @@
   "license": "MIT",
   "sideEffects": false,
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./dirs": {
-      "import": "./dist/dirs.js",
-      "types": "./dist/dirs.d.ts"
-    },
+    ".": "./dist/index.mjs",
+    "./dirs": "./dist/dirs.mjs",
     "./package.json": "./package.json"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.mts",
   "files": [
-    "dist",
-    "client"
+    "dist"
   ],
   "scripts": {
-    "build": "pnpm build:client && tsup",
-    "build:client": "vite build",
-    "dev": "vite",
-    "dev:node": "tsup --watch"
+    "build": "pnpm dev:prepare && nuxi build src && tsdown",
+    "build:debug": "NUXT_DEBUG_BUILD=true pnpm run build",
+    "dev": "nuxi dev src",
+    "dev:prepare": "nuxi prepare src",
+    "dev:node": "tsdown --watch",
+    "prepack": "pnpm build"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.6.0",
     "@rspack-devtools/kit": "workspace:*",
     "@rspack-devtools/rpc": "workspace:*",
     "birpc": "^2.3.0",
+    "d3-shape": "^3.2.0",
     "launch-editor": "^2.9.1",
-    "tinyglobby": "^0.2.15"
+    "tinyglobby": "^0.2.15",
+    "vue-virtual-scroller": "2.0.0-beta.8"
   },
   "devDependencies": {
+    "@iconify-json/ph": "^1.2.2",
+    "@iconify-json/svg-spinners": "^1.2.4",
     "@iconify/json": "^2.2.0",
+    "@rspack-devtools/ui": "workspace:*",
     "@types/d3": "^7.4.3",
     "@types/node": "^22.0.0",
-    "@unocss/reset": "^66.0.0",
-    "@vitejs/plugin-vue": "^5.2.0",
+    "@types/splitpanes": "^2.2.6",
+    "@unocss/nuxt": "^66.0.0",
+    "@vueuse/components": "^12.0.0",
+    "@vueuse/core": "^12.0.0",
+    "@vueuse/nuxt": "^12.0.0",
+    "@vueuse/router": "^12.0.0",
+    "comlink": "^4.4.2",
     "d3": "^7.9.0",
+    "d3-hierarchy": "^3.1.2",
+    "diff-match-patch-es": "^0.1.0",
+    "floating-vue": "^5.2.0",
     "fuse.js": "^7.0.0",
-    "tsup": "^8.4.0",
+    "idb-keyval": "^6.2.1",
+    "modern-monaco": "^0.1.0",
+    "nanovis": "^1.0.0",
+    "nuxt": "^3.15.0",
+    "splitpanes": "^3.1.7",
+    "theme-vitesse": "^0.7.0",
+    "tsdown": "^0.21.0",
     "typescript": "^5.7.0",
-    "unocss": "^66.0.0",
-    "vite": "^6.0.0",
-    "vue": "^3.5.0",
-    "vue-router": "^4.5.0"
+    "unocss": "^66.0.0"
   },
   "peerDependencies": {
     "@rspack/core": ">=1.0.0"

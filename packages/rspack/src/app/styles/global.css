@@ -1,0 +1,86 @@
+html, body, #__nuxt {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --app-scrollbar-size: 6px;
+  --app-scrollbar-radius: 1px;
+  --app-scrollbar-thumb: #8884;
+  --app-scrollbar-thumb-hover: #8885;
+}
+
+.bg-dots {
+  background-image: radial-gradient(circle, rgba(128, 128, 128, 0.15) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.dark .bg-dots,
+.bg-dots.dark {
+  color-scheme: dark;
+  background-image: radial-gradient(circle, rgba(128, 128, 128, 0.06) 1px, transparent 1px);
+}
+
+html {
+  background-color: white;
+  --uno: font-sans;
+}
+html.dark {
+  background-color: #111;
+}
+body {
+  --uno: color-base;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+.v-popper--theme-dropdown .v-popper__inner,
+.v-popper--theme-tooltip .v-popper__inner {
+  --uno: bg-tooltip color-base font-sans rounded border border-base shadow dark:shadow-2xl;
+  box-shadow: 0 6px 30px #0000001a;
+}
+
+.v-popper--theme-tooltip .v-popper__inner {
+  --uno: text-sm;
+}
+
+.v-popper--theme-dropdown .v-popper__inner {
+  max-width: 50vw;
+  max-height: 50vh;
+  overflow: auto;
+}
+
+.v-popper--theme-tooltip .v-popper__arrow-inner,
+.v-popper--theme-dropdown .v-popper__arrow-inner {
+  visibility: visible;
+  --uno: border-solid border-white dark:border-#111;
+}
+
+.v-popper--theme-tooltip .v-popper__arrow-outer,
+.v-popper--theme-dropdown .v-popper__arrow-outer {
+  --uno: border-solid border-base;
+}
+
+::-webkit-scrollbar {
+  width: var(--app-scrollbar-size);
+}
+
+::-webkit-scrollbar:horizontal {
+  height: var(--app-scrollbar-size);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border-radius: var(--app-scrollbar-radius);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

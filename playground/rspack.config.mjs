@@ -41,7 +41,7 @@ export default {
     new rspack.HtmlRspackPlugin({
       template: './index.html',
     }),
-    RspackDevTools({ port: 7821 }),
+    RspackDevTools({ port: 7821, clientAuth: false }),
   ],
   resolve: {
     extensions: ['.js', '.jsx', '.json'],
