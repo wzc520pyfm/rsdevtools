@@ -62,7 +62,7 @@ export async function startDevToolsServer(
   context: DevToolsNodeContext,
   options: RspackDevToolsOptions = {},
 ): Promise<DevToolsServer> {
-  const host = options.host ?? 'localhost'
+  const host = options.host ?? '127.0.0.1'
   const requestedPort = options.port ?? 7821
   const port = await getPort({ port: requestedPort, host })
 

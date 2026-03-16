@@ -13,6 +13,26 @@ export default {
   devServer: {
     port: 9300,
     historyApiFallback: true,
+    setupMiddlewares(middlewares) {
+      middlewares.unshift({
+        name: 'devtools-inject-proxy',
+        path: '/devtools-inject.js',
+        middleware: async (req, res) => {
+          try {
+            const resp = await fetch('http://127.0.0.1:7821/devtools-inject.js')
+            const text = await resp.text()
+            res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
+            res.setHeader('Cache-Control', 'no-cache')
+            res.end(text)
+          }
+          catch {
+            res.statusCode = 502
+            res.end('DevTools server not ready')
+          }
+        },
+      })
+      return middlewares
+    },
   },
   module: {
     rules: [

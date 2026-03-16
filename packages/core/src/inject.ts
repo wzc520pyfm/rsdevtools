@@ -93,7 +93,7 @@ export function getInjectClientScript(
   DOCKS = DOCKS.concat(BUILTIN_DOCKS);
 
   var defaults = {
-    position: 'left', width: 45, height: 55, left: 50, top: 50,
+    position: 'left', width: 60, height: 55, left: 50, top: 50,
     open: false, selectedDock: null, anchorOffset: 50,
     inactiveTimeout: 4000,
   };
@@ -761,26 +761,27 @@ export function getInjectClientScript(
   }
 
   function positionPanel() {
-    var p = store.position, w = store.width, h = store.height, m = 4;
+    var p = store.position, w = store.width, h = store.height, m = 8;
+    var dockOffset = Math.round((dockBar.offsetHeight || 40) / 2);
     panel.style.left = 'auto'; panel.style.right = 'auto'; panel.style.top = 'auto'; panel.style.bottom = 'auto';
     if (p === 'left') {
-      panel.style.left = m+'px'; panel.style.top = m+'px';
+      panel.style.left = dockOffset+'px'; panel.style.top = m+'px';
       panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
       panelIframe.style.height = 'calc(100vh - '+(m*2+36)+'px)';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else if (p === 'right') {
-      panel.style.right = m+'px'; panel.style.top = m+'px';
+      panel.style.right = dockOffset+'px'; panel.style.top = m+'px';
       panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
       panelIframe.style.height = 'calc(100vh - '+(m*2+36)+'px)';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else if (p === 'bottom') {
-      panel.style.left = m+'px'; panel.style.bottom = m+'px';
-      panel.style.width = 'calc(100vw - '+(m*2)+'px)'; panel.style.height = h+'vh';
+      panel.style.left = dockOffset+'px'; panel.style.bottom = m+'px';
+      panel.style.width = 'calc(100vw - '+(dockOffset*2)+'px)'; panel.style.height = h+'vh';
       panelIframe.style.height = 'calc('+h+'vh - 36px)';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else {
-      panel.style.left = m+'px'; panel.style.top = m+'px';
-      panel.style.width = 'calc(100vw - '+(m*2)+'px)'; panel.style.height = h+'vh';
+      panel.style.left = dockOffset+'px'; panel.style.top = m+'px';
+      panel.style.width = 'calc(100vw - '+(dockOffset*2)+'px)'; panel.style.height = h+'vh';
       panelIframe.style.height = 'calc('+h+'vh - 36px)';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     }

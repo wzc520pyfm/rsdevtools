@@ -30,7 +30,7 @@ const items = computed<SideNavItem[]>(() => {
 <template>
   <div>
     <div
-      border="r y base rounded-r-xl" flex="~ col gap-1" p1 of-y-auto max-h-96vh bg-glass
+      border="r y base rounded-r-xl" flex="~ col gap-2" p2 of-y-auto max-h-96vh bg-glass
       class="fixed left-0 top-1/2 -translate-y-1/2 z-50"
     >
       <template v-for="item in items" :key="item.title">
