@@ -93,7 +93,7 @@ export function getInjectClientScript(
   DOCKS = DOCKS.concat(BUILTIN_DOCKS);
 
   var defaults = {
-    position: 'left', width: 60, height: 55, left: 50, top: 50,
+    position: 'bottom', width: 80, height: 60, left: 50, top: 50,
     open: false, selectedDock: null, anchorOffset: 50,
     inactiveTimeout: 4000,
   };
@@ -379,47 +379,11 @@ export function getInjectClientScript(
   // ===== Panel =====
   var panel = document.createElement('div');
   panel.id = 'rspack-devtools-panel';
-  panel.style.cssText = 'position:fixed;z-index:2147483646;pointer-events:auto;display:none;background:rgba(20,20,30,0.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(136,136,136,0.2);border-radius:8px;overflow:hidden;opacity:0;transition:opacity 200ms ease,transform 300ms cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 4px 24px rgba(0,0,0,0.3),0 0 0 1px rgba(255,255,255,0.04) inset;';
-
-  var panelHeader = document.createElement('div');
-  panelHeader.style.cssText = 'height:36px;display:flex;align-items:center;padding:0 12px;gap:8px;border-bottom:1px solid rgba(136,136,136,0.15);user-select:none;';
-
-  var panelIcon = document.createElement('span');
-  panelIcon.style.cssText = 'display:flex;align-items:center;';
-  panelIcon.innerHTML = makeSVG('rspack-logo');
-
-  var panelTitle = document.createElement('span');
-  panelTitle.style.cssText = 'flex:1;font-size:12px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:0.02em;';
-  panelTitle.textContent = 'Rspack DevTools';
-
-  function mkHeaderBtn(title, svg, onclick) {
-    var b = document.createElement('button');
-    b.title = title; b.innerHTML = svg;
-    b.onpointerdown = function(e) { e.stopPropagation(); };
-    b.onclick = onclick;
-    b.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:4px;display:flex;align-items:center;border-radius:6px;transition:all 200ms;width:24px;height:24px;justify-content:center;';
-    b.onmouseenter = function() { b.style.color='rgba(255,255,255,0.8)'; b.style.background='rgba(136,136,136,0.1)'; };
-    b.onmouseleave = function() { b.style.color='rgba(255,255,255,0.3)'; b.style.background='none'; };
-    return b;
-  }
-
-  var headerActions = document.createElement('div');
-  headerActions.style.cssText = 'display:flex;gap:2px;';
-  headerActions.appendChild(mkHeaderBtn('Open in new window', makeSVG('popout'), function() {
-    var dock = DOCKS.find(function(d) { return d.id === store.selectedDock; });
-    var url = dock && dock.url ? dock.url : DEVTOOLS_URL;
-    window.open(url, 'rspack-devtools', 'width=1200,height=800');
-    closePanel();
-  }));
-  headerActions.appendChild(mkHeaderBtn('Close panel', makeSVG('close'), function() { closePanel(); }));
-
-  panelHeader.appendChild(panelIcon);
-  panelHeader.appendChild(panelTitle);
-  panelHeader.appendChild(headerActions);
+  panel.style.cssText = 'position:fixed;z-index:2147483646;pointer-events:auto;display:none;background:rgba(17,17,17,0.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(136,136,136,0.13);border-radius:8px;overflow:hidden;opacity:0;transition:opacity 200ms ease,transform 300ms cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 4px 24px rgba(0,0,0,0.3);';
 
   // Panel content: iframe (for iframe/builtin), launcher div, custom-render div
   var panelIframe = document.createElement('iframe');
-  panelIframe.style.cssText = 'width:100%;border:none;border:1px solid rgba(136,136,136,0.2);border-radius:8px;display:block;';
+  panelIframe.style.cssText = 'width:100%;border:none;border-radius:8px;display:block;';
 
   var panelLauncher = document.createElement('div');
   panelLauncher.style.cssText = 'width:100%;display:none;padding:40px;text-align:center;color:rgba(255,255,255,0.8);';
@@ -443,7 +407,6 @@ export function getInjectClientScript(
     '</div>',
   ].join('');
 
-  panel.appendChild(panelHeader);
   panel.appendChild(panelIframe);
   panel.appendChild(panelLauncher);
   panel.appendChild(panelCustom);
@@ -652,7 +615,6 @@ export function getInjectClientScript(
     positionPanel();
     panel.style.display = 'block';
     requestAnimationFrame(function() { panel.style.opacity = '1'; panel.style.transform = 'none'; });
-    panelTitle.textContent = dock.title;
 
     if (dock.id === '~auth-notice') {
       showPanelContent('auth-notice');
@@ -767,22 +729,22 @@ export function getInjectClientScript(
     if (p === 'left') {
       panel.style.left = dockOffset+'px'; panel.style.top = m+'px';
       panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
-      panelIframe.style.height = 'calc(100vh - '+(m*2+36)+'px)';
+      panelIframe.style.height = 'calc(100vh - '+(m*2)+'px)';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else if (p === 'right') {
       panel.style.right = dockOffset+'px'; panel.style.top = m+'px';
       panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
-      panelIframe.style.height = 'calc(100vh - '+(m*2+36)+'px)';
+      panelIframe.style.height = 'calc(100vh - '+(m*2)+'px)';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else if (p === 'bottom') {
       panel.style.left = dockOffset+'px'; panel.style.bottom = m+'px';
       panel.style.width = 'calc(100vw - '+(dockOffset*2)+'px)'; panel.style.height = h+'vh';
-      panelIframe.style.height = 'calc('+h+'vh - 36px)';
+      panelIframe.style.height = h+'vh';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else {
       panel.style.left = dockOffset+'px'; panel.style.top = m+'px';
       panel.style.width = 'calc(100vw - '+(dockOffset*2)+'px)'; panel.style.height = h+'vh';
-      panelIframe.style.height = 'calc('+h+'vh - 36px)';
+      panelIframe.style.height = h+'vh';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     }
   }
