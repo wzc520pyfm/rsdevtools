@@ -648,7 +648,7 @@ function _expandFromEnv(value) {
 const _inlineRuntimeConfig = {
   "app": {
     "baseURL": "/.devtools-rspack/",
-    "buildId": "49156711-a541-4222-8164-6fbd6a5c5ec4",
+    "buildId": "2323a8a3-302c-4b09-a6c9-ea6c82da5c47",
     "buildAssetsDir": "/_nuxt/",
     "cdnURL": ""
   },

@@ -41,6 +41,10 @@ export const DisplayFileSizeBadge: typeof import("../app/components/display/File
 export const DisplayGraphHoverView: typeof import("../app/components/display/GraphHoverView.vue")['default']
 export const DisplayModuleId: typeof import("../app/components/display/ModuleId.vue")['default']
 export const DisplayTreeNode: typeof import("../app/components/display/TreeNode.vue")['default']
+export const LogsFilterToggles: typeof import("../app/components/logs/FilterToggles.vue")['default']
+export const LogsHashBadge: typeof import("../app/components/logs/HashBadge.vue")['default']
+export const LogsLogItem: typeof import("../app/components/logs/LogItem.vue")['default']
+export const LogsLogItemConstants: typeof import("../app/components/logs/LogItemConstants")['default']
 export const ModulesDetailedList: typeof import("../app/components/modules/DetailedList.vue")['default']
 export const ModulesFlatList: typeof import("../app/components/modules/FlatList.vue")['default']
 export const ModulesFolder: typeof import("../app/components/modules/Folder.vue")['default']
@@ -110,6 +114,10 @@ export const LazyDisplayFileSizeBadge: LazyComponent<typeof import("../app/compo
 export const LazyDisplayGraphHoverView: LazyComponent<typeof import("../app/components/display/GraphHoverView.vue")['default']>
 export const LazyDisplayModuleId: LazyComponent<typeof import("../app/components/display/ModuleId.vue")['default']>
 export const LazyDisplayTreeNode: LazyComponent<typeof import("../app/components/display/TreeNode.vue")['default']>
+export const LazyLogsFilterToggles: LazyComponent<typeof import("../app/components/logs/FilterToggles.vue")['default']>
+export const LazyLogsHashBadge: LazyComponent<typeof import("../app/components/logs/HashBadge.vue")['default']>
+export const LazyLogsLogItem: LazyComponent<typeof import("../app/components/logs/LogItem.vue")['default']>
+export const LazyLogsLogItemConstants: LazyComponent<typeof import("../app/components/logs/LogItemConstants")['default']>
 export const LazyModulesDetailedList: LazyComponent<typeof import("../app/components/modules/DetailedList.vue")['default']>
 export const LazyModulesFlatList: LazyComponent<typeof import("../app/components/modules/FlatList.vue")['default']>
 export const LazyModulesFolder: LazyComponent<typeof import("../app/components/modules/Folder.vue")['default']>

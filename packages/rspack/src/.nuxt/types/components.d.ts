@@ -41,6 +41,10 @@ interface _GlobalComponents {
   DisplayGraphHoverView: typeof import("../../app/components/display/GraphHoverView.vue")['default']
   DisplayModuleId: typeof import("../../app/components/display/ModuleId.vue")['default']
   DisplayTreeNode: typeof import("../../app/components/display/TreeNode.vue")['default']
+  LogsFilterToggles: typeof import("../../app/components/logs/FilterToggles.vue")['default']
+  LogsHashBadge: typeof import("../../app/components/logs/HashBadge.vue")['default']
+  LogsLogItem: typeof import("../../app/components/logs/LogItem.vue")['default']
+  LogsLogItemConstants: typeof import("../../app/components/logs/LogItemConstants")['default']
   ModulesDetailedList: typeof import("../../app/components/modules/DetailedList.vue")['default']
   ModulesFlatList: typeof import("../../app/components/modules/FlatList.vue")['default']
   ModulesFolder: typeof import("../../app/components/modules/Folder.vue")['default']
@@ -110,6 +114,10 @@ interface _GlobalComponents {
   LazyDisplayGraphHoverView: LazyComponent<typeof import("../../app/components/display/GraphHoverView.vue")['default']>
   LazyDisplayModuleId: LazyComponent<typeof import("../../app/components/display/ModuleId.vue")['default']>
   LazyDisplayTreeNode: LazyComponent<typeof import("../../app/components/display/TreeNode.vue")['default']>
+  LazyLogsFilterToggles: LazyComponent<typeof import("../../app/components/logs/FilterToggles.vue")['default']>
+  LazyLogsHashBadge: LazyComponent<typeof import("../../app/components/logs/HashBadge.vue")['default']>
+  LazyLogsLogItem: LazyComponent<typeof import("../../app/components/logs/LogItem.vue")['default']>
+  LazyLogsLogItemConstants: LazyComponent<typeof import("../../app/components/logs/LogItemConstants")['default']>
   LazyModulesDetailedList: LazyComponent<typeof import("../../app/components/modules/DetailedList.vue")['default']>
   LazyModulesFlatList: LazyComponent<typeof import("../../app/components/modules/FlatList.vue")['default']>
   LazyModulesFolder: LazyComponent<typeof import("../../app/components/modules/Folder.vue")['default']>
