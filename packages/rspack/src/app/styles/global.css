@@ -29,6 +29,15 @@ html {
 html.dark {
   background-color: #111;
 }
+html.dock-frame,
+html.dock-frame.dark,
+html.dock-frame.light {
+  background-color: transparent !important;
+}
+html.dock-frame body,
+html.dock-frame #__nuxt {
+  background: transparent !important;
+}
 body {
   --uno: color-base;
 }

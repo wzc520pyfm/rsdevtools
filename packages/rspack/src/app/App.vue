@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useHead } from '#app/composables/head'
+import { useRoute } from '#app/composables/router'
+import { onMounted } from 'vue'
 import { connect, connectionState } from './composables/rpc'
 import './styles/global.css'
 import './styles/splitpanes.css'
@@ -10,6 +12,19 @@ useHead({
 })
 
 connect()
+
+const route = useRoute()
+
+const isDockFrame = typeof window !== 'undefined' && (window !== window.parent || route.path.startsWith('/dock'))
+if (isDockFrame) {
+  document.documentElement.classList.add('dock-frame')
+}
+
+onMounted(() => {
+  if (isDockFrame) {
+    document.documentElement.classList.add('dock-frame')
+  }
+})
 </script>
 
 <template>

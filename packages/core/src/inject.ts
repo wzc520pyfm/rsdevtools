@@ -55,7 +55,7 @@ export function getInjectClientScript(
 
   var DEVTOOLS_URL = '${devtoolsUrl}';
   var WS_PORT = ${port};
-  var STORAGE_KEY = 'rspack-devtools-dock-state';
+  var STORAGE_KEY = 'rspack-devtools-dock-state-v5';
   var CLIENT_AUTH_ENABLED = ${clientAuth ? 'true' : 'false'};
   var REGISTERED_DOCKS = ${serializedDocks};
 
@@ -93,7 +93,7 @@ export function getInjectClientScript(
   DOCKS = DOCKS.concat(BUILTIN_DOCKS);
 
   var defaults = {
-    position: 'bottom', width: 80, height: 60, left: 50, top: 50,
+    position: 'left', width: 80, height: 65, left: 50, top: 50,
     open: false, selectedDock: null, anchorOffset: 50,
     inactiveTimeout: 4000,
   };
@@ -199,8 +199,7 @@ export function getInjectClientScript(
       }
       hideTooltip();
     };
-    btn.onpointerdown = function(e) { e.stopPropagation(); };
-    btn.onclick = function(e) { e.stopPropagation(); handleDockClick(dock); };
+    btn._dockClickHandler = function() { handleDockClick(dock); };
     dockButtons.push({ el: btn, dock: dock });
     return btn;
   }
@@ -217,9 +216,7 @@ export function getInjectClientScript(
     authBadge.style.cssText = 'display:flex;align-items:center;height:24px;border:none;background:rgba(239,68,68,0.15);color:#ef4444;cursor:pointer;border-radius:6px;padding:0 8px;font-size:11px;font-weight:600;margin-right:4px;transition:all 200ms;white-space:nowrap;';
     authBadge.onmouseenter = function() { authBadge.style.background = 'rgba(239,68,68,0.25)'; showTooltip(authBadge, 'Click to authorize'); };
     authBadge.onmouseleave = function() { authBadge.style.background = 'rgba(239,68,68,0.15)'; hideTooltip(); };
-    authBadge.onpointerdown = function(e) { e.stopPropagation(); };
-    authBadge.onclick = function(e) {
-      e.stopPropagation();
+    authBadge._dockClickHandler = function() {
       openPanel({ id: '~auth-notice', title: 'Unauthorized', icon: '', type: '~builtin' });
       showPanelContent('auth-notice');
     };
@@ -296,8 +293,7 @@ export function getInjectClientScript(
       overflowBtnEl.style.background = 'transparent';
       overflowBtnEl.style.transform = 'scale(1)';
     };
-    overflowBtnEl.onpointerdown = function(e) { e.stopPropagation(); };
-    overflowBtnEl.onclick = function(e) { e.stopPropagation(); toggleOverflowPopup(); };
+    overflowBtnEl._dockClickHandler = function() { toggleOverflowPopup(); };
     dockEntriesEl.appendChild(overflowBtnEl);
 
     overflowPopup = document.createElement('div');
@@ -383,7 +379,18 @@ export function getInjectClientScript(
 
   // Panel content: iframe (for iframe/builtin), launcher div, custom-render div
   var panelIframe = document.createElement('iframe');
-  panelIframe.style.cssText = 'width:100%;border:none;border-radius:8px;display:block;';
+  panelIframe.setAttribute('allowtransparency', 'true');
+  panelIframe.style.cssText = 'width:100%;border:none;border-radius:8px;display:block;background:transparent;';
+  panelIframe.addEventListener('load', function() {
+    try {
+      var doc = panelIframe.contentDocument;
+      if (doc) {
+        var s = doc.createElement('style');
+        s.textContent = 'html, html.dark, html.light, body, #__nuxt { background: transparent !important; }';
+        doc.head.appendChild(s);
+      }
+    } catch(e) {}
+  });
 
   var panelLauncher = document.createElement('div');
   panelLauncher.style.cssText = 'width:100%;display:none;padding:40px;text-align:center;color:rgba(255,255,255,0.8);';
@@ -724,25 +731,30 @@ export function getInjectClientScript(
 
   function positionPanel() {
     var p = store.position, w = store.width, h = store.height, m = 8;
+    var off = store.anchorOffset;
     var dockOffset = Math.round((dockBar.offsetHeight || 40) / 2);
+    var maxH = 'calc(100vh - '+(m*2)+'px)';
+    var hStyle = 'min('+h+'vh,'+maxH+')';
     panel.style.left = 'auto'; panel.style.right = 'auto'; panel.style.top = 'auto'; panel.style.bottom = 'auto';
+    var centerV = 'clamp('+m+'px, calc('+off+'vh - '+h/2+'vh), calc(100vh - '+h+'vh - '+m+'px))';
+    var centerH = 'clamp('+m+'px, calc('+off+'vw - '+w/2+'vw), calc(100vw - '+w+'vw - '+m+'px))';
     if (p === 'left') {
-      panel.style.left = dockOffset+'px'; panel.style.top = m+'px';
-      panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
-      panelIframe.style.height = 'calc(100vh - '+(m*2)+'px)';
+      panel.style.left = dockOffset+'px'; panel.style.top = centerV;
+      panel.style.width = w+'vw'; panel.style.height = hStyle;
+      panelIframe.style.height = hStyle;
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else if (p === 'right') {
-      panel.style.right = dockOffset+'px'; panel.style.top = m+'px';
-      panel.style.width = w+'vw'; panel.style.height = 'calc(100vh - '+(m*2)+'px)';
-      panelIframe.style.height = 'calc(100vh - '+(m*2)+'px)';
+      panel.style.right = dockOffset+'px'; panel.style.top = centerV;
+      panel.style.width = w+'vw'; panel.style.height = hStyle;
+      panelIframe.style.height = hStyle;
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else if (p === 'bottom') {
-      panel.style.left = dockOffset+'px'; panel.style.bottom = m+'px';
+      panel.style.left = centerH; panel.style.bottom = m+'px';
       panel.style.width = 'calc(100vw - '+(dockOffset*2)+'px)'; panel.style.height = h+'vh';
       panelIframe.style.height = h+'vh';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
     } else {
-      panel.style.left = dockOffset+'px'; panel.style.top = m+'px';
+      panel.style.left = centerH; panel.style.top = m+'px';
       panel.style.width = 'calc(100vw - '+(dockOffset*2)+'px)'; panel.style.height = h+'vh';
       panelIframe.style.height = h+'vh';
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height;
@@ -759,11 +771,12 @@ export function getInjectClientScript(
   }
 
   // ===== Drag =====
-  var isDragging = false, wasDragging = false, dragStartX, dragStartY;
+  var isDragging = false, wasDragging = false, dragStartX, dragStartY, dragStartTarget = null;
   anchor.onpointerdown = function(e) {
     if (e.button !== 0) return;
     isDragging = true; wasDragging = false;
     dragStartX = e.clientX; dragStartY = e.clientY;
+    dragStartTarget = e.target;
     anchor.setPointerCapture(e.pointerId);
     e.preventDefault();
   };
@@ -791,9 +804,18 @@ export function getInjectClientScript(
     save();
   };
   anchor.onpointerup = function(e) {
+    var wasClick = isDragging && !wasDragging;
     isDragging = false;
     anchor.releasePointerCapture(e.pointerId);
     dockContainer.style.transition = 'all 500ms cubic-bezier(0.34,1.56,0.64,1)';
+    if (wasClick && dragStartTarget) {
+      var el = dragStartTarget;
+      while (el && el !== anchor) {
+        if (el._dockClickHandler) { el._dockClickHandler(); break; }
+        el = el.parentElement;
+      }
+    }
+    dragStartTarget = null;
   };
 
   // ===== Keyboard =====
