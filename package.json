@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "pnpm -r --filter='./packages/*' build",
     "build:rpc": "pnpm --filter @rspack-devtools/rpc build",
     "build:kit": "pnpm --filter @rspack-devtools/kit build",
     "build:rspack": "pnpm --filter @rspack-devtools/rspack build",
