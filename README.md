@@ -80,27 +80,36 @@ Open the URL to explore your build.
 ```
 rs-devtools/
 ├── packages/
-│   ├── core/        # @rspack-devtools/core - Rspack plugin + data collector + server + terminal
-│   └── client/      # @rspack-devtools/client - Vue 3 standalone UI (builds into core/client/)
-└── example/         # Demo project
+│   ├── core/          # @rspack-devtools/core - Rspack plugin + server + dock injection
+│   │   └── src/
+│   │       ├── client-inject/  # Dock UI (TypeScript, built as IIFE bundle)
+│   │       ├── inject.ts       # Serves the dock bundle with runtime config
+│   │       ├── server.ts       # HTTP + WebSocket server
+│   │       └── plugin.ts       # RspackDevToolsPlugin
+│   ├── rspack/        # @rspack-devtools/rspack - Vue 3 DevTools UI
+│   ├── kit/           # @rspack-devtools/kit - Shared types and dock system
+│   ├── rpc/           # @rspack-devtools/rpc - RPC layer
+│   └── self-inspect/  # @rspack-devtools/self-inspect - Self-inspection panel
+├── playground/        # Dev playground (Rspack app with DevTools enabled)
+└── example/           # Minimal example project
 ```
 
 ### Core Plugin (`@rspack-devtools/core`)
 
 - **RspackDevToolsPlugin**: Rspack plugin that hooks into `compiler.hooks.done` to collect build stats
 - **DataCollector**: Extracts modules, chunks, assets, entrypoints, errors, warnings, plugins, and packages from stats
-- **Server**: HTTP + WebSocket server using h3 + sirv + ws
-- **RPC**: birpc-based RPC layer for real-time client-server communication (20+ RPC methods)
+- **Server**: HTTP + WebSocket server using sirv + ws
+- **RPC**: birpc-based RPC layer for real-time client-server communication
 - **TerminalHost**: Process spawning and output streaming for built-in terminal
-- **Inject**: Script injection for embedded dock mode
+- **Dock Injection**: The `client-inject/` directory contains the floating dock UI as proper TypeScript source. It is built into a standalone IIFE bundle by tsup, and at runtime the server prepends a config object before serving it to the browser
 
-### Client UI (`@rspack-devtools/client`)
+### DevTools UI (`@rspack-devtools/rspack`)
 
-- **Vue 3 + Vue Router** SPA with 9 pages and session comparison view
+- **Vue 3 + Nuxt** SPA with module inspector, chunk/asset viewers, and session comparison
 - **UnoCSS** for styling with dark mode support
 - **D3.js** for module graph visualization
 - **Fuse.js** for fuzzy search across modules, plugins, packages, and assets
-- Built output is bundled into `packages/core/client/` for serving by the plugin
+- Built output is served by the core server
 
 ## RPC Methods
 
@@ -129,18 +138,50 @@ rs-devtools/
 
 ## Development
 
+### Prerequisites
+
 ```bash
-# Install dependencies
 pnpm install
+```
 
-# Build everything
+### Full Build
+
+```bash
 pnpm build
+```
 
-# Dev mode for client UI
-pnpm dev:client
+### Running the Playground
 
-# Build the example
-pnpm example:build
+```bash
+pnpm playground
+```
+
+This starts two services:
+
+- **Rspack Dev Server** at `http://localhost:9300` — a sample app with the DevTools dock injected
+- **DevTools Server** at `http://localhost:7821` — the DevTools UI itself
+
+Open `http://localhost:9300` and you'll see the floating dock bar on the left edge. Click the lightning icon to open the DevTools panel. You can also visit `http://localhost:7821` directly for the full-page DevTools UI.
+
+### Development Workflow
+
+| What you're changing | Command | Where to verify |
+|---|---|---|
+| Dock inject logic (`packages/core/src/client-inject/`) | `pnpm build:core`, then refresh `localhost:9300` | Floating dock bar on `localhost:9300` |
+| Core server/plugin (`packages/core/src/`) | `pnpm build:core`, then restart `pnpm playground` | `localhost:9300` + `localhost:7821` |
+| DevTools UI (`packages/rspack/`) | `pnpm dev:rspack` (watch mode) | Refresh the DevTools panel or `localhost:7821` |
+| RPC layer (`packages/rpc/`) | `pnpm build:rpc`, then rebuild dependent packages | — |
+| Kit (`packages/kit/`) | `pnpm build:kit`, then rebuild dependent packages | — |
+
+### Package Build Commands
+
+```bash
+pnpm build:core          # @rspack-devtools/core
+pnpm build:rspack        # @rspack-devtools/rspack (UI)
+pnpm build:rpc           # @rspack-devtools/rpc
+pnpm build:kit           # @rspack-devtools/kit
+pnpm build:self-inspect  # @rspack-devtools/self-inspect
+pnpm dev:rspack          # Watch mode for the DevTools UI
 ```
 
 ## Options
