@@ -314,20 +314,32 @@ function init() {
   panel.id = 'rspack-devtools-panel'
   panel.style.cssText = 'position:fixed;z-index:2147483646;pointer-events:auto;display:none;background:rgba(17,17,17,0.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(136,136,136,0.13);border-radius:8px;overflow:hidden;opacity:0;transition:opacity 200ms ease,transform 300ms cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 4px 24px rgba(0,0,0,0.3);'
 
-  const panelIframe = document.createElement('iframe')
-  panelIframe.setAttribute('allowtransparency', 'true')
-  panelIframe.style.cssText = 'width:100%;border:none;border-radius:8px;display:block;background:transparent;'
-  panelIframe.addEventListener('load', () => {
-    try {
-      const doc = panelIframe.contentDocument
-      if (doc) {
-        const s = doc.createElement('style')
-        s.textContent = 'html, html.dark, html.light, body, #__nuxt { background: transparent !important; }'
-        doc.head.appendChild(s)
-      }
+  const iframeCache = new Map<string, HTMLIFrameElement>()
+  let activeIframe: HTMLIFrameElement | null = null
+
+  function getOrCreateIframe(dockId: string, url: string): HTMLIFrameElement {
+    let iframe = iframeCache.get(dockId)
+    if (!iframe) {
+      iframe = document.createElement('iframe')
+      iframe.setAttribute('allowtransparency', 'true')
+      iframe.style.cssText = 'width:100%;border:none;border-radius:8px;display:none;background:transparent;'
+      iframe.addEventListener('load', () => {
+        try {
+          const doc = iframe!.contentDocument
+          if (doc) {
+            const s = doc.createElement('style')
+            s.textContent = 'html, html.dark, html.light, body, #__nuxt { background: transparent !important; }'
+            doc.head.appendChild(s)
+          }
+        }
+        catch {}
+      })
+      iframe.src = url
+      panel.appendChild(iframe)
+      iframeCache.set(dockId, iframe)
     }
-    catch {}
-  })
+    return iframe
+  }
 
   const panelLauncher = document.createElement('div')
   panelLauncher.style.cssText = 'width:100%;display:none;padding:40px;text-align:center;color:rgba(255,255,255,0.8);'
@@ -351,7 +363,6 @@ function init() {
     '</div>',
   ].join('')
 
-  panel.appendChild(panelIframe)
   panel.appendChild(panelLauncher)
   panel.appendChild(panelCustom)
   panel.appendChild(panelAuthNotice)
@@ -482,7 +493,8 @@ function init() {
 
   // ===== Panel content switching =====
   function showPanelContent(type: string) {
-    panelIframe.style.display = (type === 'iframe' || type === '~builtin') ? 'block' : 'none'
+    iframeCache.forEach(iframe => { iframe.style.display = 'none' })
+    activeIframe = null
     panelLauncher.style.display = type === 'launcher' ? 'block' : 'none'
     panelCustom.style.display = type === 'custom-render' ? 'block' : 'none'
     panelAuthNotice.style.display = type === 'auth-notice' ? 'block' : 'none'
@@ -561,9 +573,6 @@ function init() {
     store.open = true
     store.selectedDock = dock.id
     save()
-    positionPanel()
-    panel.style.display = 'block'
-    requestAnimationFrame(() => { panel.style.opacity = '1'; panel.style.transform = 'none' })
 
     if (dock.id === '~auth-notice') {
       showPanelContent('auth-notice')
@@ -580,9 +589,14 @@ function init() {
       showPanelContent('iframe')
       let url = dock.url || DEVTOOLS_URL
       url = appendAuthParam(url)
-      if (panelIframe.src !== url) panelIframe.src = url
+      const iframe = getOrCreateIframe(dock.id, url)
+      iframe.style.display = 'block'
+      activeIframe = iframe
     }
 
+    positionPanel()
+    panel.style.display = 'block'
+    requestAnimationFrame(() => { panel.style.opacity = '1'; panel.style.transform = 'none' })
     updateDockButtons()
     if (inactiveTimer) clearTimeout(inactiveTimer)
   }
@@ -690,26 +704,26 @@ function init() {
     if (p === 'left') {
       panel.style.left = `${dockOffset}px`; panel.style.top = centerV
       panel.style.width = `${w}vw`; panel.style.height = hStyle
-      panelIframe.style.height = hStyle
-      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height
+      iframeCache.forEach(f => { f.style.height = hStyle })
+      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = hStyle
     }
     else if (p === 'right') {
       panel.style.right = `${dockOffset}px`; panel.style.top = centerV
       panel.style.width = `${w}vw`; panel.style.height = hStyle
-      panelIframe.style.height = hStyle
-      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height
+      iframeCache.forEach(f => { f.style.height = hStyle })
+      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = hStyle
     }
     else if (p === 'bottom') {
       panel.style.left = centerH; panel.style.bottom = `${m}px`
       panel.style.width = `calc(100vw - ${dockOffset * 2}px)`; panel.style.height = `${h}vh`
-      panelIframe.style.height = `${h}vh`
-      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height
+      iframeCache.forEach(f => { f.style.height = `${h}vh` })
+      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = `${h}vh`
     }
     else {
       panel.style.left = centerH; panel.style.top = `${m}px`
       panel.style.width = `calc(100vw - ${dockOffset * 2}px)`; panel.style.height = `${h}vh`
-      panelIframe.style.height = `${h}vh`
-      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = panelIframe.style.height
+      iframeCache.forEach(f => { f.style.height = `${h}vh` })
+      panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = `${h}vh`
     }
   }
 
