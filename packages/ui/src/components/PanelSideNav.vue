@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SideNavItem } from '../composables/nav'
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { toggleDark } from '../composables/dark'
 import { sideNavItems } from '../composables/nav'
 
@@ -10,6 +11,8 @@ const props = withDefaults(defineProps<{
 }>(), {
   showDarkModeToggle: true,
 })
+
+const router = useRouter()
 
 const items = computed<SideNavItem[]>(() => {
   const navItems = props.items ?? sideNavItems.value
@@ -25,6 +28,14 @@ const items = computed<SideNavItem[]>(() => {
     },
   ]
 })
+
+function handleNav(e: Event, item: SideNavItem) {
+  if (item.to) {
+    e.preventDefault()
+    router.push(item.to)
+  }
+  item.action?.()
+}
 </script>
 
 <template>
@@ -41,7 +52,7 @@ const items = computed<SideNavItem[]>(() => {
           rounded-full
           p2 hover:bg-active op-fade hover:op100
           flex="~ items-center justify-center"
-          @click="item.action?.()"
+          @click="handleNav($event, item)"
         >
           <div :class="item.icon" text-lg />
         </component>
