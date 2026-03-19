@@ -32,7 +32,9 @@ html.dark {
 html.dock-frame,
 html.dock-frame.dark,
 html.dock-frame.light {
-  background-color: transparent !important;
+  background: transparent !important;
+  background-image: none !important;
+  color-scheme: normal !important;
 }
 html.dock-frame body,
 html.dock-frame #__nuxt {
