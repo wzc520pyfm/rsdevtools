@@ -9,6 +9,41 @@
   --accent: #60a5fa;
   --accent-purple: #a78bfa;
   --border: rgba(255,255,255,0.06);
+  --kbd-bg: #1e1e30;
+  --hint-bg: rgba(96,165,250,0.05);
+  --hint-border: rgba(96,165,250,0.12);
+  --btn-bg: rgba(96,165,250,0.1);
+  --btn-border: rgba(96,165,250,0.2);
+  --btn-bg-hover: rgba(96,165,250,0.2);
+  --btn-border-hover: rgba(96,165,250,0.35);
+  --code-bg: rgba(0,0,0,0.3);
+  --code-text: #9ca3af;
+  --code-inline-bg: rgba(96,165,250,0.1);
+  --logo-glow: rgba(96,165,250,0.25);
+  --theme-toggle-shadow: rgba(0,0,0,0.25);
+}
+
+:root[data-theme="light"] {
+  --bg: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-hover: #e2e8f0;
+  --text: #0f172a;
+  --text-dim: #64748b;
+  --accent: #2563eb;
+  --accent-purple: #7c3aed;
+  --border: rgba(15,23,42,0.1);
+  --kbd-bg: #e2e8f0;
+  --hint-bg: rgba(37,99,235,0.06);
+  --hint-border: rgba(37,99,235,0.18);
+  --btn-bg: rgba(37,99,235,0.08);
+  --btn-border: rgba(37,99,235,0.22);
+  --btn-bg-hover: rgba(37,99,235,0.14);
+  --btn-border-hover: rgba(37,99,235,0.4);
+  --code-bg: #f1f5f9;
+  --code-text: #334155;
+  --code-inline-bg: rgba(37,99,235,0.1);
+  --logo-glow: rgba(37,99,235,0.2);
+  --theme-toggle-shadow: rgba(15,23,42,0.08);
 }
 
 body {
@@ -16,10 +51,35 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  box-shadow: 0 2px 12px var(--theme-toggle-shadow);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-hover);
+  border-color: var(--btn-border-hover);
 }
 
 kbd {
-  background: #1e1e30;
+  background: var(--kbd-bg);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 1px 6px;
@@ -28,7 +88,7 @@ kbd {
 }
 
 code {
-  background: rgba(96,165,250,0.1);
+  background: var(--code-inline-bg);
   color: var(--accent);
   padding: 1px 5px;
   border-radius: 4px;
@@ -51,7 +111,7 @@ code {
 }
 
 .logo {
-  filter: drop-shadow(0 0 24px rgba(96,165,250,0.25));
+  filter: drop-shadow(0 0 24px var(--logo-glow));
 }
 
 .hero h1 {
@@ -72,8 +132,8 @@ code {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(96,165,250,0.05);
-  border: 1px solid rgba(96,165,250,0.12);
+  background: var(--hint-bg);
+  border: 1px solid var(--hint-border);
   border-radius: 10px;
   padding: 0.8rem 1rem;
   margin-bottom: 2rem;
@@ -85,6 +145,11 @@ code {
 .hint-icon {
   flex-shrink: 0;
   display: flex;
+  color: var(--accent);
+}
+
+.hint-svg {
+  display: block;
 }
 
 .card-grid {
@@ -97,6 +162,7 @@ code {
   border-radius: 12px;
   padding: 1.5rem;
   border: 1px solid var(--border);
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .card h3 {
@@ -129,10 +195,10 @@ code {
   justify-content: center;
 }
 
-button {
-  background: rgba(96,165,250,0.1);
+button:not(.theme-toggle) {
+  background: var(--btn-bg);
   color: var(--accent);
-  border: 1px solid rgba(96,165,250,0.2);
+  border: 1px solid var(--btn-border);
   padding: 0.5rem 1.25rem;
   border-radius: 8px;
   cursor: pointer;
@@ -141,19 +207,19 @@ button {
   transition: all 0.15s;
 }
 
-button:hover {
-  background: rgba(96,165,250,0.2);
-  border-color: rgba(96,165,250,0.35);
+button:not(.theme-toggle):hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
 }
 
 .code-block {
-  background: rgba(0,0,0,0.3);
+  background: var(--code-bg);
   border-radius: 8px;
   padding: 1rem;
   font-size: 0.8rem;
   font-family: 'SF Mono', 'Fira Code', monospace;
   line-height: 1.6;
-  color: #9ca3af;
+  color: var(--code-text);
   overflow-x: auto;
   white-space: pre;
 }

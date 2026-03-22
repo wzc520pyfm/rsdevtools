@@ -1,10 +1,41 @@
 import React, { useState } from 'react'
+import { applyTheme } from './theme'
+
+function readThemeFromDom() {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
+}
 
 export function App() {
   const [count, setCount] = useState(0)
+  const [theme, setTheme] = useState(readThemeFromDom)
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    applyTheme(next)
+    setTheme(next)
+  }
 
   return (
     <div className="app">
+      <button
+        type="button"
+        className="theme-toggle"
+        onClick={toggleTheme}
+        aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+      >
+        {theme === 'dark' ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        )}
+      </button>
+
       <div className="hero">
         <div className="logo-wrapper">
           <svg className="logo" width="72" height="72" viewBox="0 0 24 24" fill="none">
@@ -23,7 +54,7 @@ export function App() {
 
       <div className="hint-box">
         <span className="hint-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="hint-svg">
             <circle cx="12" cy="12" r="10" />
             <path d="M12 16v-4M12 8h.01" />
           </svg>
