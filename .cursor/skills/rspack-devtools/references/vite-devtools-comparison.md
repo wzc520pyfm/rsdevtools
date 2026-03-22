@@ -123,6 +123,10 @@ How rs-devtools maps to vite-devtools concepts for feature parity.
 - **vite-devtools**: Nuxt-based client with auto-imports, Nuxt modules
 - **rs-devtools**: Vanilla Vue 3 + vue-router + Vite; simpler but less framework support
 
+### Launcher → iframe (nested dev server)
+- **vite-devtools playground** (`packages/core/playground/vite.config.ts`): runs `vite dev` in a terminal for the demo, but after launch the dock iframe URL is set to **`https://antfu.me`**, not the nested local dev server — so it never hits cross-origin / `X-Frame-Options` between two local ports.
+- **rs-devtools playground** (`playground/rspack.config.mjs`): same idea — terminal runs a light command (`node -v`), iframe opens **`https://rspack.rs/`**. For a **second local dev server** behind the dock, use **`openUrlAfterLaunch: '/__rdt_nested__/'`** plus host **`devServer.proxy`**; the inject client resolves `/__rdt_nested__/*` against `location.origin` (see `packages/core/src/client-inject/index.ts`).
+
 ### Not Supported (Rspack limitations)
 - Per-transform timing data (Rspack does not expose individual transform hooks)
 - Rolldown-specific build events (Rspack uses stats.toJson() snapshots)

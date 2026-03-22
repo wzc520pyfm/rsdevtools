@@ -1,5 +1,10 @@
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { rspack } from '@rspack/core'
 import { RspackDevTools } from '@rspack-devtools/core'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const nestedReactRoot = join(__dirname, 'nested-react-app')
 
 /** @type {import('@rspack/cli').Configuration} */
 export default {
@@ -61,7 +66,23 @@ export default {
     new rspack.HtmlRspackPlugin({
       template: './index.html',
     }),
-    RspackDevTools({ port: 7821, clientAuth: false }),
+    RspackDevTools({
+      port: 7821,
+      clientAuth: false,
+      /**
+       * Terminals：再起一个 Rspack dev（nested-react-app:9301）。
+       * Dock iframe：打开 Rspack 官网（不嵌本地子服务，避免跨源 iframe 问题）。
+       */
+      launcher: {
+        command: 'pnpm exec rspack serve',
+        cwd: nestedReactRoot,
+        title: 'Nested React',
+        description: '在 Terminals 里启动 nested-react-app（端口 9301）；Launch 后本面板内嵌打开 rspack.rs（若官网禁止 iframe 则可能空白）。',
+        openUrlAfterLaunch: 'https://rspack.rs/',
+        iframeTitleAfterLaunch: 'Rspack',
+        iframeIconAfterLaunch: 'ph:globe-duotone',
+      },
+    }),
   ],
   resolve: {
     extensions: ['.js', '.jsx', '.json'],

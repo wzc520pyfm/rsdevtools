@@ -1,5 +1,5 @@
-export { DevToolsRspackUI, DataCollector } from './node'
-export type { DevToolsRspackUIOptions } from './node'
+export { DevToolsRspackUI, DataCollector, DEFAULT_RSPACK_DEV_LAUNCHER } from './node'
+export type { DevToolsRspackUIOptions, LauncherConfig } from './node'
 export { rspackBuildRpcDeclarations } from './node'
 export { clientPublicDir } from './dirs'
 

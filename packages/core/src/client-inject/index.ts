@@ -1,4 +1,5 @@
 /// <reference lib="dom" />
+import { createBirpc } from 'birpc'
 import { makeSVG, renderIcon } from './icons'
 import type { DockButtonItem, DockEntry, DockState, InjectConfig } from './types'
 
@@ -18,6 +19,20 @@ function init() {
   const CLIENT_AUTH_ENABLED = config.clientAuth
   const REGISTERED_DOCKS = config.docks
 
+  /**
+   * Same-origin iframe URLs: host app devServer proxies this prefix to a second dev server.
+   * Resolves to `location.origin` so localhost vs 127.0.0.1 always matches the page (vite-devtools
+   * playground avoids this by using an external iframe URL like https://antfu.me instead).
+   */
+  const SAME_ORIGIN_NESTED_PREFIX = '/__rdt_nested__'
+  function resolveDockIframeUrl(url: string): string {
+    if (!url) return DEVTOOLS_URL
+    if (url.includes('://')) return url
+    if (url === SAME_ORIGIN_NESTED_PREFIX || url.startsWith(`${SAME_ORIGIN_NESTED_PREFIX}/`))
+      return `${location.origin}${url.startsWith('/') ? url : `/${url}`}`
+    return DEVTOOLS_URL + url
+  }
+
   // ===== Auth ID =====
   const AUTH_KEY = 'rspack-devtools-auth-id'
   let authId = ''
@@ -28,15 +43,27 @@ function init() {
   }
   let isRpcTrusted = !CLIENT_AUTH_ENABLED
 
-  // ===== Build dock entries =====
-  let DOCKS: DockEntry[] = REGISTERED_DOCKS.map((d) => {
-    const entry: DockEntry = { id: d.id, title: d.title, icon: d.icon, type: d.type, category: d.category || 'default' }
-    if (d.type === 'iframe') entry.url = d.url ? (d.url.indexOf('://') > -1 ? d.url : DEVTOOLS_URL + d.url) : DEVTOOLS_URL
-    if (d.type === 'launcher') entry.launcher = d.launcher
+  // ===== Build dock entries (mutated when server pushes dock updates) =====
+  function normalizeDockEntryFromSerialized(d: any): DockEntry {
+    const icon = typeof d.icon === 'string'
+      ? d.icon
+      : d.icon && typeof d.icon === 'object' && 'light' in d.icon
+        ? String((d.icon as { light: string }).light)
+        : 'ph:question-duotone'
+    const entry: DockEntry = { id: d.id, title: d.title, icon, type: d.type, category: d.category || 'default' }
+    if (d.type === 'iframe')
+      entry.url = resolveDockIframeUrl(d.url || '')
+    if (d.type === 'launcher') {
+      entry.launcher = d.launcher
+        ? { ...d.launcher, title: d.launcher.title || d.title || 'Launcher' }
+        : { title: d.title || 'Launcher', buttonStart: 'Launch', buttonLoading: 'Loading...' }
+    }
     if (d.type === 'action') entry.action = d.action
     if (d.type === 'custom-render') entry.renderer = d.renderer
     return entry
-  })
+  }
+
+  let DOCKS: DockEntry[] = REGISTERED_DOCKS.map(normalizeDockEntryFromSerialized)
 
   if (DOCKS.length === 0) {
     DOCKS = [{ id: 'rspack-build', title: 'Build Analysis', icon: 'ph:lightning-duotone', type: 'iframe', url: DEVTOOLS_URL, category: '~rspackplus' }]
@@ -104,7 +131,7 @@ function init() {
 
   // ===== Create dock buttons =====
   const dockButtons: DockButtonItem[] = []
-  function createDockButton(dock: DockEntry): HTMLButtonElement {
+  function createDockButton(dock: DockEntry, registerInDockButtons = true): HTMLButtonElement {
     const btn = document.createElement('button')
     btn.title = dock.title
     btn.dataset.dockId = dock.id
@@ -126,8 +153,12 @@ function init() {
       }
       hideTooltip()
     }
-    ;(btn as any)._dockClickHandler = () => { handleDockClick(dock) }
-    dockButtons.push({ el: btn, dock })
+    ;(btn as any)._dockClickHandler = () => {
+      const id = btn.dataset.dockId
+      handleDockClick(DOCKS.find(d => d.id === id))
+    }
+    if (registerInDockButtons)
+      dockButtons.push({ el: btn, dock })
     return btn
   }
 
@@ -180,6 +211,7 @@ function init() {
 
   // ===== Overflow button & popup =====
   let overflowPopup: HTMLDivElement | null = null
+  let overflowGridEl: HTMLDivElement | null = null
   let overflowBtnEl: HTMLButtonElement | null = null
 
   let updateBadgePosition: (() => void) | null = null
@@ -233,8 +265,9 @@ function init() {
 
     const overflowGrid = document.createElement('div')
     overflowGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:0;justify-content:center;'
+    overflowGridEl = overflowGrid
     overflowDocks.forEach((dock) => {
-      overflowGrid.appendChild(createDockButton(dock))
+      overflowGrid.appendChild(createDockButton(dock, false))
     })
     overflowPopup.appendChild(overflowGrid)
     root.appendChild(overflowPopup)
@@ -323,6 +356,7 @@ function init() {
       iframe = document.createElement('iframe')
       iframe.setAttribute('allowtransparency', 'true')
       iframe.style.cssText = 'width:100%;border:none;border-radius:8px;display:none;background:transparent;'
+      iframe.dataset.rdtDockUrl = url
       iframe.addEventListener('load', () => {
         try {
           const doc = iframe!.contentDocument
@@ -337,6 +371,10 @@ function init() {
       iframe.src = url
       panel.appendChild(iframe)
       iframeCache.set(dockId, iframe)
+    }
+    else if (iframe.dataset.rdtDockUrl !== url) {
+      iframe.dataset.rdtDockUrl = url
+      iframe.src = url
     }
     return iframe
   }
@@ -413,84 +451,6 @@ function init() {
   root.appendChild(toastContainer)
   document.body.appendChild(root)
 
-  // ===== WebSocket =====
-  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-
-  let rpcReqCounter = 0
-  function nextRpcId() { return `rdt-${++rpcReqCounter}-${Date.now()}` }
-
-  function requestAuth(ws: WebSocket) {
-    if (!CLIENT_AUTH_ENABLED || isRpcTrusted) return
-    const rid = nextRpcId()
-    try {
-      const ua = navigator.userAgent || 'Unknown'
-      ws.send(JSON.stringify({ m: 'rspack:anonymous:auth', a: [{ authId, ua, origin: location.origin }], t: 'q', i: rid }))
-      const handler = (e: MessageEvent) => {
-        try {
-          const msg = JSON.parse(e.data)
-          if (msg.t === 's' && msg.i === rid) {
-            ws.removeEventListener('message', handler)
-            if (msg.r && msg.r.isTrusted) {
-              isRpcTrusted = true
-              updateAuthUI()
-            }
-          }
-        }
-        catch {}
-      }
-      ws.addEventListener('message', handler)
-    }
-    catch {}
-  }
-
-  function connectWs() {
-    try {
-      let wsUrl = `${wsProtocol}//${config.host}:${WS_PORT}`
-      if (CLIENT_AUTH_ENABLED) wsUrl += `?rspack_devtools_auth_id=${encodeURIComponent(authId)}`
-      const ws = new WebSocket(wsUrl)
-      ws.onopen = () => { requestAuth(ws) }
-      ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data)
-          if (msg.t === 'q' && msg.m === 'devtoolskit:internal:logs:updated' && isRpcTrusted) {
-            fetchNewLogs(ws)
-          }
-        }
-        catch {}
-      }
-      ws.onclose = () => { setTimeout(connectWs, 5000) }
-      ws.onerror = () => {}
-    }
-    catch {}
-  }
-
-  let lastLogVersion: number | undefined
-  function fetchNewLogs(ws: WebSocket) {
-    const rid = nextRpcId()
-    try {
-      ws.send(JSON.stringify({ m: 'devtoolskit:internal:logs:list', a: [lastLogVersion], t: 'q', i: rid }))
-      const handler = (e: MessageEvent) => {
-        try {
-          const msg = JSON.parse(e.data)
-          if (msg.t === 's' && msg.i === rid && msg.r) {
-            ws.removeEventListener('message', handler)
-            lastLogVersion = msg.r.version
-            if (msg.r.entries) {
-              msg.r.entries.forEach((entry: any) => {
-                if (entry.notify) addToast(entry)
-              })
-            }
-          }
-        }
-        catch {}
-      }
-      ws.addEventListener('message', handler)
-    }
-    catch {}
-  }
-
-  connectWs()
-
   // ===== Panel content switching =====
   function showPanelContent(type: string) {
     iframeCache.forEach(iframe => { iframe.style.display = 'none' })
@@ -501,7 +461,7 @@ function init() {
   }
 
   function renderLauncher(dock: DockEntry) {
-    const l = dock.launcher!
+    const l = dock.launcher ?? { title: dock.title || 'Launcher', buttonStart: 'Launch', buttonLoading: 'Loading...' }
     panelLauncher.innerHTML = ''
     const icon = document.createElement('div')
     icon.style.cssText = 'margin-bottom:16px;'
@@ -512,7 +472,8 @@ function init() {
     title.textContent = l.title
     const desc = document.createElement('p')
     desc.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.5);margin:0 0 24px;'
-    desc.textContent = l.description || ''
+    desc.textContent = [l.description, l.error].filter(Boolean).join('\n') || ''
+    if (l.error) desc.style.color = 'rgba(248,113,113,0.9)'
     const btn = document.createElement('button')
     btn.style.cssText = 'padding:8px 24px;border-radius:8px;border:none;background:#a78bfa;color:white;font-size:14px;font-weight:500;cursor:pointer;transition:all 200ms;'
     btn.textContent = l.buttonStart || 'Launch'
@@ -525,7 +486,12 @@ function init() {
       btn.disabled = true
       btn.style.opacity = '0.6'
       fetch(`${DEVTOOLS_URL}/.devtools/api/launch/${encodeURIComponent(dock.id)}`, { method: 'POST' })
-        .then(() => { btn.textContent = 'Done'; btn.style.background = '#22c55e' })
+        .then(async (res) => {
+          if (!res.ok) throw new Error('launch failed')
+          await refreshUserDocks()
+          btn.textContent = 'Done'
+          btn.style.background = '#22c55e'
+        })
         .catch(() => { btn.textContent = 'Error'; btn.style.background = '#ef4444' })
     }
     panelLauncher.appendChild(icon)
@@ -587,7 +553,7 @@ function init() {
     }
     else {
       showPanelContent('iframe')
-      let url = dock.url || DEVTOOLS_URL
+      let url = resolveDockIframeUrl(dock.url || '')
       url = appendAuthParam(url)
       const iframe = getOrCreateIframe(dock.id, url)
       iframe.style.display = 'block'
@@ -729,12 +695,115 @@ function init() {
 
   function updateDockButtons() {
     dockButtons.forEach((item) => {
-      const isSelected = store.selectedDock === item.dock.id && store.open
+      const id = item.el.dataset.dockId
+      const isSelected = store.selectedDock === id && store.open
       item.el.style.color = isSelected ? '#a78bfa' : 'rgba(255,255,255,0.5)'
       item.el.style.background = isSelected ? 'rgba(136,136,136,0.07)' : 'transparent'
       item.el.style.transform = isSelected ? 'scale(1.2)' : 'scale(1)'
     })
   }
+
+  // ===== WebSocket (birpc): dock list sync + logs + server broadcasts =====
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  let injectRpc: any = null
+  let lastLogVersion: number | undefined
+
+  function syncDockBarFromDocks() {
+    dockButtons.forEach(({ el }) => {
+      const id = el.dataset.dockId
+      if (!id) return
+      const dock = DOCKS.find(x => x.id === id)
+      if (!dock) return
+      el.title = dock.title
+      el.innerHTML = renderIcon(dock.icon)
+    })
+    if (overflowGridEl && overflowBtnEl) {
+      overflowGridEl.innerHTML = ''
+      DOCKS.slice(DOCK_CAPACITY).forEach((dock) => {
+        overflowGridEl!.appendChild(createDockButton(dock, false))
+      })
+      const n = Math.max(0, DOCKS.length - DOCK_CAPACITY)
+      overflowBtnEl.title = `More (${n})`
+      const badge = overflowBtnEl.querySelector('span')
+      if (badge) badge.textContent = n > 9 ? '9+' : String(n)
+    }
+  }
+
+  async function refreshUserDocks() {
+    try {
+      const r = await fetch(`${DEVTOOLS_URL}/.devtools/api/docks`)
+      if (!r.ok) return
+      const api = await r.json() as any[]
+      const user = api.map(normalizeDockEntryFromSerialized)
+      DOCKS = user.concat(BUILTIN_DOCKS)
+      syncDockBarFromDocks()
+      if (store.open && store.selectedDock) {
+        const sel = DOCKS.find(d => d.id === store.selectedDock)
+        if (sel) openPanel(sel)
+      }
+      updateDockButtons()
+      if (store.open) positionPanel()
+    }
+    catch {}
+  }
+
+  async function fetchNewLogsFromRpc() {
+    if (!isRpcTrusted || !injectRpc) return
+    try {
+      const res = await injectRpc['devtoolskit:internal:logs:list'](lastLogVersion)
+      if (res?.version !== undefined) lastLogVersion = res.version
+      if (res?.entries) {
+        res.entries.forEach((entry: any) => {
+          if (entry.notify) addToast(entry)
+        })
+      }
+    }
+    catch {}
+  }
+
+  function requestAuthRpc(rpc: any) {
+    if (!CLIENT_AUTH_ENABLED || isRpcTrusted) return
+    rpc['rspack:anonymous:auth']({ authId, ua: navigator.userAgent || 'Unknown', origin: location.origin })
+      .then((result: any) => {
+        if (result?.isTrusted) {
+          isRpcTrusted = true
+          updateAuthUI()
+        }
+      })
+      .catch(() => {})
+  }
+
+  function connectWs() {
+    try {
+      let wsUrl = `${wsProtocol}//${config.host}:${WS_PORT}`
+      if (CLIENT_AUTH_ENABLED) wsUrl += `?rspack_devtools_auth_id=${encodeURIComponent(authId)}`
+      const ws = new WebSocket(wsUrl)
+      const rpc = createBirpc(
+        {
+          'devtoolskit:internal:docks:updated': refreshUserDocks,
+          'devtoolskit:internal:terminals:updated': () => {},
+          'devtoolskit:internal:terminals:stream-chunk': () => {},
+          'devtoolskit:internal:logs:updated': fetchNewLogsFromRpc,
+        },
+        {
+          post: (data) => { if (ws.readyState === WebSocket.OPEN) ws.send(data) },
+          on: (fn) => { ws.addEventListener('message', e => fn((e as MessageEvent).data)) },
+          serialize: JSON.stringify,
+          deserialize: JSON.parse,
+        },
+      )
+      injectRpc = rpc
+      ws.onopen = () => { requestAuthRpc(rpc) }
+      ws.onclose = () => {
+        injectRpc = null
+        setTimeout(connectWs, 5000)
+      }
+      ws.onerror = () => {}
+    }
+    catch {}
+  }
+
+  connectWs()
 
   // ===== Drag =====
   let isDragging = false

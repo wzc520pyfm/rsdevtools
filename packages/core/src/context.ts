@@ -1,5 +1,6 @@
 import type { DevToolsNodeContext, DevToolsPluginOptions } from '@rspack-devtools/kit'
 import type { RspackDevToolsOptions } from './types'
+import { debugContextSetup } from './debug-rspack'
 import { DevToolsDockHost } from './hosts/dock-host'
 import { DevToolsLogsHost } from './hosts/logs-host'
 import { RpcFunctionsHost } from './hosts/rpc-host'
@@ -77,6 +78,10 @@ export async function createDevToolsContext(
 
   docksHost.events.on('dock:entry:updated', () => {
     docksSharedState.mutate(() => context.docks.values())
+    void rpcHost.broadcast({
+      method: 'devtoolskit:internal:docks:updated',
+      args: [],
+    })
   })
 
   terminalsHost.events.on('terminal:session:updated', () => {
@@ -129,11 +134,14 @@ export async function createDevToolsContext(
   for (const plugin of devtoolsPlugins) {
     if (!plugin.devtools?.setup) continue
     if (shouldSkipSetupByCapabilities(plugin, context.mode)) {
-      console.log(`[Rspack DevTools] Skipping plugin "${plugin.name ?? plugin.constructor?.name}" (disabled for ${context.mode} mode)`)
+      const pluginName = plugin.name ?? plugin.constructor?.name ?? 'unknown'
+      debugContextSetup(`skipping plugin ${JSON.stringify(pluginName)} due to disabled capabilities in ${context.mode} mode`)
+      console.log(`[Rspack DevTools] Skipping plugin "${pluginName}" (disabled for ${context.mode} mode)`)
       continue
     }
     try {
       const pluginName = plugin.name ?? plugin.constructor?.name ?? 'unknown'
+      debugContextSetup(`setting up plugin ${JSON.stringify(pluginName)}`)
       console.log(`[Rspack DevTools] Setting up plugin: ${pluginName}`)
       await plugin.devtools.setup(context)
     }

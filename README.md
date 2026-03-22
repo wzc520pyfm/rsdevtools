@@ -28,6 +28,15 @@ A comprehensive set of developer tools for visualizing and analyzing your Rspack
 - **Embedded Mode (Dock)**: Inject DevTools as a floating panel in your application via `</body>` script injection
 - **Real-time Updates**: WebSocket-based RPC with automatic reconnection; build completion notifications push to the UI
 
+### Debug logging (aligned with Vite DevTools)
+
+Rspack DevTools uses [`obug`](https://github.com/unjs/obug) with the `DEBUG` env variable, similar to Vite DevTools (`vite:devtools:*`).
+
+- **Namespaces**: `rspack:devtools:context:setup`, `rspack:devtools:rpc:broadcast`, `rspack:devtools:rpc:state:changed`, `rspack:devtools:rpc:invoked`
+- **Enable**: `DEBUG=rspack:devtools:*` (or narrow, e.g. `DEBUG=rspack:devtools:rpc:*`)
+
+When `Launcher` / `ctx.terminals.run()` starts a **nested** dev process that also loads DevTools and inherits `DEBUG`, verbose logs will appear in the **Terminals** panel (same idea as nested `vite dev` under Vite DevTools).
+
 ## Quick Start
 
 ### 1. Install

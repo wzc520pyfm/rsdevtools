@@ -15,6 +15,9 @@ export type {
   RspackDevToolsOptions,
 } from './types'
 
+export type { LauncherConfig } from '@rspack-devtools/rspack'
+export { DEFAULT_RSPACK_DEV_LAUNCHER } from '@rspack-devtools/rspack'
+
 // Re-export from @rspack-devtools/rspack for convenience
 export { DataCollector } from '@rspack-devtools/rspack'
 export type {

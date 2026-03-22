@@ -2,3 +2,4 @@ packages:
   - 'packages/*'
   - 'example'
   - 'playground'
+  - 'playground/nested-react-app'

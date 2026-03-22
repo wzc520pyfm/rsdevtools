@@ -25,7 +25,7 @@ function getClientBundle(): string {
   return _bundleCache
 }
 
-function serializeDocks(docks: DevToolsDockUserEntry[]): SerializedDock[] {
+export function serializeDocks(docks: DevToolsDockUserEntry[]): SerializedDock[] {
   return docks.map((dock) => {
     const icon = typeof dock.icon === 'string' ? dock.icon : dock.icon.light
     const base: SerializedDock = {
@@ -37,12 +37,14 @@ function serializeDocks(docks: DevToolsDockUserEntry[]): SerializedDock[] {
     }
     if (dock.type === 'iframe') base.url = dock.url
     if (dock.type === 'launcher') {
+      const L = dock.launcher
       base.launcher = {
-        title: dock.launcher.title,
-        description: dock.launcher.description,
-        buttonStart: dock.launcher.buttonStart ?? 'Launch',
-        buttonLoading: dock.launcher.buttonLoading ?? 'Loading...',
-        status: dock.launcher.status,
+        title: (L?.title ?? dock.title) || 'Launcher',
+        description: L?.description,
+        buttonStart: L?.buttonStart ?? 'Launch',
+        buttonLoading: L?.buttonLoading ?? 'Loading...',
+        status: L?.status,
+        error: L?.error,
       }
     }
     if (dock.type === 'action') base.action = { importFrom: dock.action.importFrom, importName: dock.action.importName }

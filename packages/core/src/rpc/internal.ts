@@ -65,17 +65,36 @@ export function internalRpcDeclarations(): RpcFunctionDefinition[] {
             throw new Error(`Dock "${dockId}" is not a launcher entry`)
           }
           const launcher = entry.launcher
+          const formatErr = (err: unknown) =>
+            err instanceof Error
+              ? err.message
+              : typeof err === 'object' && err !== null && 'message' in err
+                ? String((err as { message: unknown }).message)
+                : String(err)
           try {
             ctx.docks.update({ ...entry, launcher: { ...launcher, status: 'loading' } } as any)
             await launcher.onLaunch()
-            ctx.docks.update({ ...entry, launcher: { ...launcher, status: 'success' } } as any)
+            const latest = ctx.docks.values({ includeBuiltin: false }).find(e => e.id === dockId)
+            if (latest?.type === 'launcher') {
+              ctx.docks.update({
+                ...latest,
+                launcher: { ...latest.launcher, status: 'success' },
+              } as any)
+            }
           }
-          catch (err: any) {
-            ctx.docks.update({
-              ...entry,
-              launcher: { ...launcher, status: 'error', error: err?.message ?? String(err) },
-            } as any)
-            throw err
+          catch (err: unknown) {
+            const latest = ctx.docks.values({ includeBuiltin: false }).find(e => e.id === dockId)
+            if (latest?.type === 'launcher') {
+              ctx.docks.update({
+                ...latest,
+                launcher: {
+                  ...latest.launcher,
+                  status: 'error',
+                  error: formatErr(err),
+                },
+              } as any)
+            }
+            throw err instanceof Error ? err : new Error(formatErr(err))
           }
         },
       }),

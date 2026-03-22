@@ -8,6 +8,7 @@ import type {
   RpcSharedStateHost,
   SharedState,
 } from '@rspack-devtools/kit'
+import { debugRpcBroadcast, debugRpcStateChanged, nextRspackDevtoolsSyncId } from '../debug-rspack'
 
 export class RpcFunctionsHost implements RpcFunctionsHostType {
   private definitions = new Map<string, RpcFunctionDefinition>()
@@ -66,8 +67,14 @@ export class RpcFunctionsHost implements RpcFunctionsHostType {
   async broadcast<
     T extends keyof DevToolsRpcClientFunctions,
   >(options: RpcBroadcastOptions<T>): Promise<void> {
-    if (this._broadcastFn) {
+    if (!this._broadcastFn)
+      return
+    debugRpcBroadcast(JSON.stringify(options.method))
+    try {
       await this._broadcastFn(options as RpcBroadcastOptions)
+    }
+    catch (err) {
+      console.warn(`[DevTools] broadcast ${String(options.method)} failed:`, err)
     }
   }
 
@@ -107,10 +114,12 @@ class SimpleSharedStateHost implements RpcSharedStateHost {
         if (result !== undefined) {
           value = result
         }
+        debugRpcStateChanged('updated', { key, syncId: nextRspackDevtoolsSyncId() })
         listeners.forEach((fn) => fn(value))
       },
       patch: (partial) => {
         value = { ...value, ...partial }
+        debugRpcStateChanged('patch', { key, syncId: nextRspackDevtoolsSyncId(), keys: Object.keys(partial as object) })
         listeners.forEach((fn) => fn(value))
       },
       on: (event, handler) => {

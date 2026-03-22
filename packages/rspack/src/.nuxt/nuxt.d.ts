@@ -1,5 +1,5 @@
-/// <reference types="@unocss/nuxt" />
 /// <reference types="@vueuse/nuxt" />
+/// <reference types="@unocss/nuxt" />
 /// <reference types="@nuxt/telemetry" />
 /// <reference path="types/nitro-layouts.d.ts" />
 /// <reference path="types/builder-env.d.ts" />

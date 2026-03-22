@@ -35,6 +35,10 @@ export interface ServerFunctions {
 export interface ClientFunctions {
   'rspack:build-started': () => void
   'rspack:build-completed': (session: { id: string; timestamp: number }) => void
+  'devtoolskit:internal:docks:updated': () => void
+  'devtoolskit:internal:terminals:updated': () => void
+  'devtoolskit:internal:terminals:stream-chunk': () => void
+  'devtoolskit:internal:logs:updated': () => void
 }
 
 const rpcInstance = shallowRef<ReturnType<typeof createBirpc<ServerFunctions, ClientFunctions>> | null>(null)
@@ -88,6 +92,10 @@ export function connect() {
     {
       'rspack:build-started': () => {},
       'rspack:build-completed': (session) => { buildNotification.value = session },
+      'devtoolskit:internal:docks:updated': () => {},
+      'devtoolskit:internal:terminals:updated': () => {},
+      'devtoolskit:internal:terminals:stream-chunk': () => {},
+      'devtoolskit:internal:logs:updated': () => {},
     },
     {
       post: (data) => {

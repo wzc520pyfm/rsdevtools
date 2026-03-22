@@ -54,7 +54,10 @@ export class RspackDevToolsPlugin {
           const builtinPlugins: any[] = []
 
           if (this.options.builtinDevTools !== false) {
-            builtinPlugins.push(DevToolsRspackUI({ collector: this.collector }))
+            builtinPlugins.push(DevToolsRspackUI({
+              collector: this.collector,
+              launcher: this.options.launcher,
+            }))
             builtinPlugins.push(DevToolsSelfInspect({ clientBaseUrl: '/.devtools-rspack' }))
           }
 

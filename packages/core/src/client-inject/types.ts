@@ -11,6 +11,7 @@ export interface SerializedDock {
     buttonStart?: string
     buttonLoading?: string
     status?: string
+    error?: string
   }
   action?: { importFrom: string; importName?: string }
   renderer?: { importFrom: string; importName?: string }
@@ -37,6 +38,7 @@ export interface DockEntry {
     buttonStart?: string
     buttonLoading?: string
     status?: string
+    error?: string
   }
   action?: { importFrom: string; importName?: string }
   renderer?: { importFrom: string; importName?: string }

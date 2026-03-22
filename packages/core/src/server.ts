@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { WebSocket as WsWebSocket } from 'ws'
-import type { DevToolsNodeContext } from '@rspack-devtools/kit'
+import type { DevToolsDockUserEntry, DevToolsNodeContext } from '@rspack-devtools/kit'
 import type { AuthInput, ConnectionAuthMeta } from './auth'
 import type { ConnectionMeta, RspackDevToolsOptions } from './types'
 import { createServer } from 'node:http'
@@ -13,7 +13,8 @@ import sirv from 'sirv'
 import { WebSocketServer } from 'ws'
 import { clientPublicDir as rspackClientDir } from '@rspack-devtools/rspack/dirs'
 import { ANONYMOUS_SCOPE, AUTH_METHOD, AuthStorage, extractAuthIdFromRequest, isClientAuthDisabledByEnv, promptAuth } from './auth'
-import { getInjectClientScript } from './inject'
+import { debugRpcInvoked } from './debug-rspack'
+import { getInjectClientScript, serializeDocks } from './inject'
 import { RpcFunctionsHost } from './hosts/rpc-host'
 import { DevToolsViewHost } from './hosts/view-host'
 
@@ -74,12 +75,19 @@ export async function startDevToolsServer(
   const wsClients = new Set<any>()
 
   rpcHost._setBroadcast(async (broadcastOptions) => {
-    for (const client of wsClients) {
-      try {
-        ;(client as any)[broadcastOptions.method]?.(...broadcastOptions.args)
-      }
-      catch {}
-    }
+    // Birpc client method calls may return rejecting Promises; must settle them
+    // or Node reports ERR_UNHANDLED_REJECTION when no WS client handles the event.
+    await Promise.allSettled(
+      [...wsClients].map((client) => {
+        try {
+          const ret = (client as any)[broadcastOptions.method]?.(...broadcastOptions.args)
+          return Promise.resolve(ret)
+        }
+        catch {
+          return Promise.resolve()
+        }
+      }),
+    )
   })
 
   const clientDir = resolveClientDir(options.clientDir)
@@ -130,8 +138,9 @@ export async function startDevToolsServer(
     if (url === '/.devtools/api/docks') {
       res.setHeader('Content-Type', 'application/json')
       res.setHeader('Access-Control-Allow-Origin', '*')
-      const entries = context.docks.values({ includeBuiltin: false })
-      res.end(JSON.stringify(entries))
+      /** Same shape as inject script — JSON.stringify(raw docks) drops fns and can leave launcher entries without usable UI fields */
+      const entries = context.docks.values({ includeBuiltin: false }) as DevToolsDockUserEntry[]
+      res.end(JSON.stringify(serializeDocks(entries)))
       return
     }
 
@@ -199,27 +208,35 @@ export async function startDevToolsServer(
 
     const wrappedHandlers: Record<string, (...args: any[]) => any> = {}
 
+    const rpcTraceLabel = `[${authId ?? 'anonymous'}] [${meta.isTrusted ? 'trusted' : 'untrusted'}]`
+    function traceRpc(name: string, fn: (...args: any[]) => any) {
+      return (...args: any[]) => {
+        debugRpcInvoked(`${JSON.stringify(name)} from ${rpcTraceLabel}`)
+        return fn(...args)
+      }
+    }
+
     for (const [name, handler] of Object.entries(resolvedHandlers)) {
       if (clientAuthDisabled || name.startsWith(ANONYMOUS_SCOPE)) {
-        wrappedHandlers[name] = handler
+        wrappedHandlers[name] = traceRpc(name, handler)
       }
       else {
-        wrappedHandlers[name] = (...args: any[]) => {
+        wrappedHandlers[name] = traceRpc(name, (...args: any[]) => {
           if (!meta.isTrusted) {
             throw new Error(`Unauthorized access to method "${name}"`)
           }
           return handler(...args)
-        }
+        })
       }
     }
 
-    wrappedHandlers[AUTH_METHOD] = async (query: AuthInput) => {
+    wrappedHandlers[AUTH_METHOD] = traceRpc(AUTH_METHOD, async (query: AuthInput) => {
       if (clientAuthDisabled) {
         meta.isTrusted = true
         return { isTrusted: true }
       }
       return promptAuth(authStorage!, meta, query)
-    }
+    })
 
     const rpc = createBirpc<Record<string, any>, Record<string, any>>(
       wrappedHandlers,

@@ -1,3 +1,5 @@
+import type { LauncherConfig } from '@rspack-devtools/rspack'
+
 // Re-export build analysis types from @rspack-devtools/rspack for backward compatibility
 export type {
   BuildSession,
@@ -51,6 +53,12 @@ export interface RspackDevToolsOptions {
    * @default true
    */
   clientAuth?: boolean
+  /**
+   * Terminal launcher dock(s) (see DevToolsRspackUI `launcher`).
+   * - `undefined`: default `rspack serve` launcher is registered
+   * - `false`: no launcher dock
+   */
+  launcher?: LauncherConfig | LauncherConfig[] | false
 }
 
 // ---- Terminal ----
