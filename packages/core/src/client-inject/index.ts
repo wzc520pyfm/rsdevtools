@@ -157,6 +157,10 @@ function init() {
       const id = btn.dataset.dockId
       handleDockClick(DOCKS.find(d => d.id === id))
     }
+    btn.onclick = (e) => {
+      e.stopPropagation()
+      ;(btn as any)._dockClickHandler?.()
+    }
     if (registerInDockButtons)
       dockButtons.push({ el: btn, dock })
     return btn
@@ -258,6 +262,10 @@ function init() {
       _overflowBtnEl.style.transform = 'scale(1)'
     }
     ;(overflowBtnEl as any)._dockClickHandler = () => { toggleOverflowPopup() }
+    overflowBtnEl.onclick = (e) => {
+      e.stopPropagation()
+      ;(overflowBtnEl as any)._dockClickHandler?.()
+    }
     dockEntriesEl.appendChild(overflowBtnEl)
 
     overflowPopup = document.createElement('div')
@@ -503,6 +511,7 @@ function init() {
   // ===== Dock click handler =====
   function handleDockClick(dock: DockEntry | undefined) {
     if (!dock) return
+    if (overflowPopup) overflowPopup.style.display = 'none'
 
     if (CLIENT_AUTH_ENABLED && !isRpcTrusted && dock.id !== '~auth-notice') {
       openPanel({ id: '~auth-notice', title: 'Unauthorized', icon: '', type: '~builtin', category: '~builtin' })
@@ -814,11 +823,21 @@ function init() {
 
   anchor.onpointerdown = (e: PointerEvent) => {
     if (e.button !== 0) return
-    isDragging = true; wasDragging = false
     dragStartX = e.clientX; dragStartY = e.clientY
     dragStartTarget = e.target
-    anchor.setPointerCapture(e.pointerId)
-    e.preventDefault()
+    // Only capture for drag when target is NOT a dock button (let buttons receive click via onclick)
+    let el = e.target as HTMLElement | null
+    let hasHandler = false
+    while (el && el !== anchor) {
+      if ((el as any)._dockClickHandler) { hasHandler = true; break }
+      el = el.parentElement
+    }
+    if (!hasHandler) {
+      isDragging = true
+      wasDragging = false
+      anchor.setPointerCapture(e.pointerId)
+      e.preventDefault()
+    }
   }
   anchor.onpointermove = (e: PointerEvent) => {
     if (!isDragging) return
