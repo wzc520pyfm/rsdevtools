@@ -3,9 +3,9 @@ import { useHead } from '#app/composables/head'
 import { useRoute } from '#app/composables/router'
 import { onMounted } from 'vue'
 import { connect, connectionState } from './composables/rpc'
+import { isDark } from '@rspack-devtools/ui/composables/dark'
 import './styles/global.css'
 import './styles/splitpanes.css'
-import '@rspack-devtools/ui/composables/dark'
 
 useHead({
   title: 'Rspack DevTools',
@@ -15,14 +15,16 @@ connect()
 
 const route = useRoute()
 
-const isDockFrame = typeof window !== 'undefined' && (window !== window.parent || route.path.startsWith('/dock'))
+const isDockFrame = typeof window !== 'undefined' && window !== window.parent
 if (isDockFrame) {
   document.documentElement.classList.add('dock-frame')
+  isDark.value = true
 }
 
 onMounted(() => {
   if (isDockFrame) {
     document.documentElement.classList.add('dock-frame')
+    isDark.value = true
   }
 })
 </script>
