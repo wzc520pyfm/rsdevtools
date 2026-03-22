@@ -3,9 +3,10 @@ name: rspack-devtools-development
 description: >
   Develops and extends Rspack DevTools (@rspack-devtools), a build analysis
   and visualization tool for Rspack. Use when working on rs-devtools source
-  code, adding features, fixing bugs, creating playground demos, or aligning
-  functionality with vite-devtools. Applies to files under rs-devtools/
-  packages/core, packages/client, or example directories.
+  code, adding features, fixing bugs, creating playground demos, launcher +
+  Terminals + dock iframe behavior, or aligning functionality with
+  vite-devtools. Applies to files under rs-devtools/ packages/core, packages/rspack,
+  packages/kit, playground/, or example/.
 ---
 
 # Rspack DevTools Development
@@ -25,7 +26,9 @@ rs-devtools/
 │   │   │   ├── types/       # All type definitions
 │   │   │   └── utils/       # defineRpcFunction, createEventEmitter, nanoid
 │   │   └── package.json
-│   ├── core/                # @rspack-devtools/core - Rspack plugin + server
+│   ├── rspack/              # @rspack-devtools/rspack - Build UI + DevToolsRspackUI (launcher, static client)
+│   ├── self-inspect/        # @rspack-devtools/self-inspect - Self-inspect dock plugin
+│   ├── core/                # @rspack-devtools/core - Rspack plugin + server + inject bundle
 │   │   ├── src/
 │   │   │   ├── plugin.ts    # RspackDevToolsPlugin (compiler.hooks.done)
 │   │   │   ├── factory.ts   # RspackDevTools() function-style factory
@@ -34,7 +37,8 @@ rs-devtools/
 │   │   │   ├── context.ts   # DevToolsNodeContext creation + host wiring
 │   │   │   ├── builtin-rpc.ts  # All builtin RPC functions (data + logs + inspect)
 │   │   │   ├── builtin-plugin.ts # Built-in dock entries (build, explorer, terminal)
-│   │   │   ├── inject.ts    # Dock UI inject script (all entry types + toast)
+│   │   │   ├── inject.ts    # getInjectClientScript + serializeDocks for inject + /.devtools/api/docks
+│   │   │   ├── client-inject/ # Vanilla dock UI source → bundled to client-inject.global.js
 │   │   │   ├── hosts/
 │   │   │   │   ├── dock-host.ts     # Dock registry with builtin entries
 │   │   │   │   ├── rpc-host.ts      # RPC function host + shared state
@@ -59,8 +63,9 @@ rs-devtools/
 │       │       └── DockSelfInspect.vue # Builtin: Self Inspect
 │       └── vite.config.ts   # Vite build for client UI
 ├── playground/              # Minimal playground (function-style API)
-│   ├── rspack.config.mjs    # Uses RspackDevTools() function-style API
-│   ├── index.html           # Loads devtools-inject.js from DevTools server
+│   ├── rspack.config.mjs    # RspackDevTools() + launcher (nested terminal + optional iframe URL)
+│   ├── nested-react-app/    # Second Rspack dev (e.g. port 9301) — launched from Terminals via launcher
+│   ├── index.html           # Loads devtools-inject.js (often proxied from :7821)
 │   └── src/                 # Simple React app
 ├── example/                 # Full example (React + Rspack)
 │   ├── rspack.config.mjs    # Uses RspackDevToolsPlugin + HtmlRspackPlugin
@@ -178,6 +183,31 @@ The dock UI is a vanilla JS script served from the DevTools server at `/devtools
 - Drag-to-dock positioning (snap to edges)
 - `window.parent !== window` guard to skip injection inside iframes
 
+## Launcher, Terminals & dock iframe
+
+**Where it lives**
+- **`packages/rspack/src/node/plugin.ts`** — `DevToolsRspackUI()` registers the build-analysis iframe dock and optional **launcher** dock(s). Options include `LauncherConfig`: `command`, `cwd`, `title`, `description`, `openUrlAfterLaunch`, `iframeTitleAfterLaunch`, `iframeIconAfterLaunch`, etc.
+- **`packages/core/src/plugin.ts`** — passes `RspackDevToolsOptions.launcher` into `DevToolsRspackUI` when built-in UI is enabled.
+- **`packages/core/src/rpc/internal.ts`** — `devtoolskit:internal:docks:on-launch` runs the launcher’s `onLaunch` (loading/success/error on the dock entry).
+- **`packages/core/src/server.ts`** — `POST /.devtools/api/launch/:dockId` invokes that RPC; **`GET /.devtools/api/docks`** returns **`serializeDocks()`** (same JSON shape as embedded in `devtools-inject.js`, so launcher metadata survives round-trips and the inject client stays in sync).
+
+**User flow**
+1. Launcher dock shows title, description, **Launch** button (vanilla UI in `packages/core/src/client-inject/index.ts`).
+2. **Launch** → HTTP POST → server runs `onLaunch`: **`ctx.terminals.run(command, cwd)`** (child process; output in **Terminals** panel).
+3. If **`openUrlAfterLaunch`** is set, **`ctx.docks.update`** replaces that dock with **`type: 'iframe'`** and the same **`id`**, so the panel loads the URL in an iframe (vite-devtools-style).
+
+**Iframe URL resolution** (inject client, `resolveDockIframeUrl`)
+- **Absolute** `http(s)://…` — used as-is (good for external sites, e.g. playground iframe → `https://rspack.rs/`).
+- **Root-relative on DevTools origin** — e.g. `/.devtools-rspack/` → prefixed with **`devtoolsUrl`** (7821) for built-in Rspack UI.
+- **`/__rdt_nested__/…`** — prefixed with **`window.location.origin`** so the **host app** can `devServer.proxy` to a second dev server: **same origin as the page**, avoids **`X-Frame-Options: SAMEORIGIN`** between two local ports and **localhost vs 127.0.0.1** mismatches.
+
+**Playground pattern vs vite-devtools**
+- **vite-devtools** playground runs `vite dev` in a terminal but points the dock iframe at **`https://antfu.me`**, not the nested local URL — deliberately avoiding cross-origin iframe issues.
+- **rs-devtools** playground: **Terminals** start a real nested app (`playground/nested-react-app`, `rspack serve` on **9301**); the dock iframe can still point at an **external** URL (**rspack.rs**) so the demo does not rely on embedding `:9301` cross-origin. For **local** embed, use the **`/__rdt_nested__/` + proxy** pattern above.
+
+**Sync**
+- WebSocket broadcast **`devtoolskit:internal:docks:updated`** triggers **`refreshUserDocks()`** in the inject script (re-fetch **`/.devtools/api/docks`**, merge builtins, refresh open panel / dock bar).
+
 ## RPC Message Format (birpc)
 
 ```
@@ -193,7 +223,7 @@ All 20 server functions are in `ServerFunctions`. Client functions (`ClientFunct
 Two playground setups are available:
 
 ### `playground/` — Minimal (function-style API)
-Demonstrates the `RspackDevTools()` function-style factory, consistent with vite-devtools' `DevTools()` API. Simple React app with counter and installation example.
+Demonstrates the `RspackDevTools()` function-style factory, consistent with vite-devtools' `DevTools()` API. Includes **`nested-react-app/`** (workspace package): a **second** Rspack dev server without DevTools, started from the **Launcher** into **Terminals** (`pnpm exec rspack serve`, cwd = nested app). **`openUrlAfterLaunch`** in `rspack.config.mjs` controls what the **dock iframe** shows after launch (e.g. external **rspack.rs**, or **`/__rdt_nested__/`** + host **`devServer.proxy`** for same-origin local embed). `index.html` typically loads **`/devtools-inject.js`** via a devServer middleware that proxies the script from the DevTools port (**7821**).
 
 ### `example/` — Full (class-style API)
 React app with hash-based routing:

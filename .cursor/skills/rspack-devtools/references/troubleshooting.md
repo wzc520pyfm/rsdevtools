@@ -64,6 +64,17 @@ lsof -ti:7821 | xargs kill -9 2>/dev/null
 **Cause**: Server restart or network interruption.
 **Fix**: Client has built-in reconnection with exponential backoff. If reconnection fails, the status indicator in the UI shows "Disconnected".
 
+### Launcher: dock iframe blank **after** Launch (local nested dev URL)
+**Cause**: Parent page (e.g. `http://localhost:9300`) and nested dev server (e.g. `http://127.0.0.1:9301`) are **different origins**; many dev servers send **`X-Frame-Options: SAMEORIGIN`**, which blocks embedding in a cross-origin iframe.
+**Fix options**:
+1. Point **`openUrlAfterLaunch`** at an **external** URL that allows framing (playground uses **`https://rspack.rs/`** while Terminals still run the nested app — same pattern as vite-devtools playground + **antfu.me**).
+2. **Same-origin proxy**: host app **`devServer.proxy`** + **`openUrlAfterLaunch: '/__rdt_nested__/'`**; inject client resolves that prefix with **`location.origin`** (see SKILL → *Launcher, Terminals & dock iframe*).
+3. Align **localhost vs 127.0.0.1** if you still use a raw second-port URL (still different ports ⇒ often still blocked without proxy).
+
+### Launcher panel empty / missing title or button
+**Cause**: `GET /.devtools/api/docks` used to return raw `JSON.stringify(docks)`; launcher sub-objects could be incomplete after sync vs inject bootstrap.
+**Fix**: Server now returns **`serializeDocks()`**; inject **`normalizeDockEntryFromSerialized`** fallbacks for `type: 'launcher'`. If this regresses, check `packages/core/src/inject.ts` and `client-inject/index.ts`.
+
 ## Dependency Issues
 
 ### `ERR_PNPM_OUTDATED_LOCKFILE`
