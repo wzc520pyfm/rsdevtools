@@ -2,14 +2,19 @@ import type { Compiler } from '@rspack/core'
 import type { DevToolsNodeContext } from '@rspack-devtools/kit'
 import type { RspackDevToolsOptions } from './types'
 import type { DevToolsServer } from './server'
+import { createRequire } from 'node:module'
 import { DevToolsRspackUI, DataCollector } from '@rspack-devtools/rspack'
 import { DevToolsSelfInspect } from '@rspack-devtools/self-inspect'
 import { createDevToolsContext } from './context'
 import { startDevToolsServer } from './server'
+import { DevToolsRsdoctorUI } from './rsdoctor-adapter'
+
+const _require = createRequire(import.meta.url)
 
 export class RspackDevToolsPlugin {
   private options: RspackDevToolsOptions
   private collector: DataCollector
+  private rsdoctorPlugin: any = null
 
   constructor(options: RspackDevToolsOptions = {}) {
     this.options = options
@@ -21,6 +26,29 @@ export class RspackDevToolsPlugin {
     let context: DevToolsNodeContext | null = null
 
     this.collector.setCwd(compiler.options.context ?? process.cwd())
+
+    if (this.options.rsdoctor !== false) {
+      try {
+        const { RsdoctorRspackPlugin } = _require('@rsdoctor/rspack-plugin')
+        const rsdoctorOpts = typeof this.options.rsdoctor === 'object' ? this.options.rsdoctor : {}
+
+        this.rsdoctorPlugin = new RsdoctorRspackPlugin({
+          port: rsdoctorOpts.port,
+          features: rsdoctorOpts.features,
+          printLog: { serverUrls: false },
+        })
+
+        // Prevent rsdoctor from opening a browser – the UI will be
+        // embedded in rs-devtools as an iframe dock instead.
+        this.rsdoctorPlugin.sdk.server.openClientPage = async () => {}
+
+        this.rsdoctorPlugin.apply(compiler)
+      }
+      catch (err) {
+        console.warn('[Rspack DevTools] Failed to initialise Rsdoctor plugin:', err)
+        this.rsdoctorPlugin = null
+      }
+    }
 
     compiler.hooks.done.tapPromise('RspackDevToolsPlugin', async (stats) => {
       const pluginNames = (compiler.options.plugins ?? [])
@@ -59,6 +87,10 @@ export class RspackDevToolsPlugin {
               launcher: this.options.launcher,
             }))
             builtinPlugins.push(DevToolsSelfInspect({ clientBaseUrl: '/.devtools-rspack' }))
+          }
+
+          if (this.rsdoctorPlugin) {
+            builtinPlugins.push(DevToolsRsdoctorUI({ rsdoctorPlugin: this.rsdoctorPlugin }))
           }
 
           const allPlugins = [

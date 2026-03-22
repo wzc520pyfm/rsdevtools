@@ -13,6 +13,7 @@ export { DevToolsTerminalHost } from './hosts/terminal-host'
 export type {
   ConnectionMeta,
   RspackDevToolsOptions,
+  RsdoctorOptions,
 } from './types'
 
 export type { LauncherConfig } from '@rspack-devtools/rspack'

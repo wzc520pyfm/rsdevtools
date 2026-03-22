@@ -12,6 +12,7 @@ export default defineConfig([
       '@rspack-devtools/rpc',
       '@rspack-devtools/rspack',
       '@rspack-devtools/self-inspect',
+      '@rsdoctor/rspack-plugin',
     ],
   },
   {

@@ -40,7 +40,7 @@ function normalizeFsKey (item) {
   return `${prefix}-${hash}`
 }
 
-const _47Users_47wangzhichao_47_21150_20844_47code_47github_47vite_45rs_45devtools_47rs_45devtools_47node_modules_47_46pnpm_47_64nuxt_43nitro_45server_643_4621_462_db0_640_463_464_idb_45keyval_646_462_462_ioredis_645_4610_460_magicast_640_465_462_nuxt_234e0028518d20fc2349296b629ae8e5_47node_modules_47_64nuxt_47nitro_45server_47dist_47runtime_47utils_47cache_45driver_46js = defineDriver(
+const _47Users_47wangzhichao_47_21150_20844_47code_47github_47vite_45rs_45devtools_47rs_45devtools_47node_modules_47_46pnpm_47_64nuxt_43nitro_45server_643_4621_462_db0_640_463_464_idb_45keyval_646_462_462_ioredis_645_4610_460_magicast_640_465_462_nuxt_21bd4455907e4ae1f975b4c34b8cb594_47node_modules_47_64nuxt_47nitro_45server_47dist_47runtime_47utils_47cache_45driver_46js = defineDriver(
   /**
    * @param {{ base?: string }} opts
    */
@@ -70,7 +70,7 @@ const storage = createStorage({});
 
 storage.mount('/assets', assets$1);
 
-storage.mount('internal:nuxt:prerender', _47Users_47wangzhichao_47_21150_20844_47code_47github_47vite_45rs_45devtools_47rs_45devtools_47node_modules_47_46pnpm_47_64nuxt_43nitro_45server_643_4621_462_db0_640_463_464_idb_45keyval_646_462_462_ioredis_645_4610_460_magicast_640_465_462_nuxt_234e0028518d20fc2349296b629ae8e5_47node_modules_47_64nuxt_47nitro_45server_47dist_47runtime_47utils_47cache_45driver_46js({"driver":"/Users/wangzhichao/办公/code/github/vite-rs-devtools/rs-devtools/node_modules/.pnpm/@nuxt+nitro-server@3.21.2_db0@0.3.4_idb-keyval@6.2.2_ioredis@5.10.0_magicast@0.5.2_nuxt_234e0028518d20fc2349296b629ae8e5/node_modules/@nuxt/nitro-server/dist/runtime/utils/cache-driver.js","base":"/Users/wangzhichao/办公/code/github/vite-rs-devtools/rs-devtools/packages/rspack/src/.nuxt/cache/nitro/prerender"}));
+storage.mount('internal:nuxt:prerender', _47Users_47wangzhichao_47_21150_20844_47code_47github_47vite_45rs_45devtools_47rs_45devtools_47node_modules_47_46pnpm_47_64nuxt_43nitro_45server_643_4621_462_db0_640_463_464_idb_45keyval_646_462_462_ioredis_645_4610_460_magicast_640_465_462_nuxt_21bd4455907e4ae1f975b4c34b8cb594_47node_modules_47_64nuxt_47nitro_45server_47dist_47runtime_47utils_47cache_45driver_46js({"driver":"/Users/wangzhichao/办公/code/github/vite-rs-devtools/rs-devtools/node_modules/.pnpm/@nuxt+nitro-server@3.21.2_db0@0.3.4_idb-keyval@6.2.2_ioredis@5.10.0_magicast@0.5.2_nuxt_21bd4455907e4ae1f975b4c34b8cb594/node_modules/@nuxt/nitro-server/dist/runtime/utils/cache-driver.js","base":"/Users/wangzhichao/办公/code/github/vite-rs-devtools/rs-devtools/packages/rspack/src/.nuxt/cache/nitro/prerender"}));
 storage.mount('data', fsDriver({"driver":"fsLite","base":"./.data/kv"}));
 storage.mount('root', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"/Users/wangzhichao/办公/code/github/vite-rs-devtools/rs-devtools/packages/rspack/src","watchOptions":{"ignored":[null]}}));
 storage.mount('src', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"/Users/wangzhichao/办公/code/github/vite-rs-devtools/rs-devtools/packages/rspack/src/app/server","watchOptions":{"ignored":[null]}}));
@@ -648,7 +648,7 @@ function _expandFromEnv(value) {
 const _inlineRuntimeConfig = {
   "app": {
     "baseURL": "/.devtools-rspack/",
-    "buildId": "c42f69b3-621a-4fb6-aad7-9fc6d1aa7ed1",
+    "buildId": "181051c6-7fe2-475e-86b5-bb8fcf9b3390",
     "buildAssetsDir": "/_nuxt/",
     "cdnURL": ""
   },
@@ -1091,12 +1091,12 @@ const _qnrUTb = eventHandler((event) => {
 
 const _SxA8c9 = defineEventHandler(() => {});
 
-const _lazy_MP9IlA = () => import('../_/renderer.mjs');
+const _lazy_lQCyTi = () => import('../_/renderer.mjs');
 
 const handlers = [
   { route: '', handler: _qnrUTb, lazy: false, middleware: true, method: undefined },
   { route: '/__nuxt_island/**', handler: _SxA8c9, lazy: false, middleware: false, method: undefined },
-  { route: '/**', handler: _lazy_MP9IlA, lazy: true, middleware: false, method: undefined }
+  { route: '/**', handler: _lazy_lQCyTi, lazy: true, middleware: false, method: undefined }
 ];
 
 function createNitroApp() {

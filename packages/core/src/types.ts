@@ -31,6 +31,25 @@ export interface ConnectionMeta {
   websocket: number
 }
 
+export interface RsdoctorOptions {
+  /**
+   * Port for rsdoctor's HTTP server.
+   * If not specified, a random port between 3000–8999 is chosen.
+   */
+  port?: number
+  /**
+   * Feature flags forwarded to `RsdoctorRspackPlugin`.
+   * @see https://rsdoctor.dev/config/options
+   */
+  features?: {
+    loader?: boolean
+    plugins?: boolean
+    bundle?: boolean
+    resolver?: boolean
+    treeShaking?: boolean
+  }
+}
+
 export interface RspackDevToolsOptions {
   port?: number
   host?: string
@@ -59,6 +78,13 @@ export interface RspackDevToolsOptions {
    * - `false`: no launcher dock
    */
   launcher?: LauncherConfig | LauncherConfig[] | false
+  /**
+   * Rsdoctor integration.
+   * - `undefined` / `true`: enable rsdoctor with default options
+   * - `false`: disable rsdoctor
+   * - object: enable rsdoctor with custom options
+   */
+  rsdoctor?: boolean | RsdoctorOptions
 }
 
 // ---- Terminal ----
