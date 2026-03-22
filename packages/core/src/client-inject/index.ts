@@ -429,6 +429,31 @@ function init() {
   panel.appendChild(panelCustom)
   panel.appendChild(panelAuthNotice)
 
+  // ===== Resize handles =====
+  const RESIZE_EDGE = 6
+  const RESIZE_CORNER = 12
+  function createResizeHandle(css: string): HTMLDivElement {
+    const el = document.createElement('div')
+    el.style.cssText = `position:absolute;z-index:10;${css}`
+    return el
+  }
+  const resizeN = createResizeHandle(`top:0;left:${RESIZE_CORNER}px;right:${RESIZE_CORNER}px;height:${RESIZE_EDGE}px;cursor:ns-resize;`)
+  const resizeS = createResizeHandle(`bottom:0;left:${RESIZE_CORNER}px;right:${RESIZE_CORNER}px;height:${RESIZE_EDGE}px;cursor:ns-resize;`)
+  const resizeE = createResizeHandle(`right:0;top:${RESIZE_CORNER}px;bottom:${RESIZE_CORNER}px;width:${RESIZE_EDGE}px;cursor:ew-resize;`)
+  const resizeW = createResizeHandle(`left:0;top:${RESIZE_CORNER}px;bottom:${RESIZE_CORNER}px;width:${RESIZE_EDGE}px;cursor:ew-resize;`)
+  const resizeNE = createResizeHandle(`top:0;right:0;width:${RESIZE_CORNER}px;height:${RESIZE_CORNER}px;cursor:nesw-resize;`)
+  const resizeNW = createResizeHandle(`top:0;left:0;width:${RESIZE_CORNER}px;height:${RESIZE_CORNER}px;cursor:nwse-resize;`)
+  const resizeSE = createResizeHandle(`bottom:0;right:0;width:${RESIZE_CORNER}px;height:${RESIZE_CORNER}px;cursor:nwse-resize;`)
+  const resizeSW = createResizeHandle(`bottom:0;left:0;width:${RESIZE_CORNER}px;height:${RESIZE_CORNER}px;cursor:nesw-resize;`)
+  panel.appendChild(resizeN)
+  panel.appendChild(resizeS)
+  panel.appendChild(resizeE)
+  panel.appendChild(resizeW)
+  panel.appendChild(resizeNE)
+  panel.appendChild(resizeNW)
+  panel.appendChild(resizeSE)
+  panel.appendChild(resizeSW)
+
   // ===== Toast overlay =====
   const toastContainer = document.createElement('div')
   toastContainer.id = 'rspack-devtools-toasts'
@@ -866,13 +891,13 @@ function init() {
     }
     else if (p === 'bottom') {
       panel.style.left = centerH; panel.style.bottom = `${m}px`
-      panel.style.width = `calc(100vw - ${dockOffset * 2}px)`; panel.style.height = `${h}vh`
+      panel.style.width = `${w}vw`; panel.style.height = `${h}vh`
       iframeCache.forEach(f => { f.style.height = `${h}vh` })
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = `${h}vh`
     }
     else {
       panel.style.left = centerH; panel.style.top = `${m}px`
-      panel.style.width = `calc(100vw - ${dockOffset * 2}px)`; panel.style.height = `${h}vh`
+      panel.style.width = `${w}vw`; panel.style.height = `${h}vh`
       iframeCache.forEach(f => { f.style.height = `${h}vh` })
       panelLauncher.style.height = panelCustom.style.height = panelAuthNotice.style.height = `${h}vh`
     }
@@ -889,6 +914,71 @@ function init() {
       setDockBarIconTransform(item.el, { selected: isSelected, hover, counterRotate })
     })
   }
+
+  // ===== Panel resize =====
+  const RESIZE_CURSORS: Record<string, string> = {
+    n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize',
+    ne: 'nesw-resize', sw: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize',
+  }
+  let _resizeActive = false
+  let _resizeStartX = 0
+  let _resizeStartY = 0
+  let _resizeStartW = 0
+  let _resizeStartH = 0
+  let _resizeDir = ''
+  let _resizeOverlay: HTMLDivElement | null = null
+
+  function startPanelResize(e: PointerEvent, dir: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    _resizeActive = true
+    _resizeStartX = e.clientX
+    _resizeStartY = e.clientY
+    _resizeStartW = store.width
+    _resizeStartH = store.height
+    _resizeDir = dir
+    iframeCache.forEach(f => { f.style.pointerEvents = 'none' })
+    _resizeOverlay = document.createElement('div')
+    _resizeOverlay.style.cssText = `position:fixed;inset:0;z-index:2147483647;cursor:${RESIZE_CURSORS[dir] || 'default'};`
+    document.body.appendChild(_resizeOverlay)
+    document.addEventListener('pointermove', onPanelResizeMove)
+    document.addEventListener('pointerup', onPanelResizeEnd)
+  }
+
+  function onPanelResizeMove(e: PointerEvent) {
+    if (!_resizeActive) return
+    const dx = e.clientX - _resizeStartX
+    const dy = e.clientY - _resizeStartY
+    const dvw = (dx / window.innerWidth) * 100
+    const dvh = (dy / window.innerHeight) * 100
+    let dw = 0
+    let dh = 0
+    if (_resizeDir.includes('e')) dw = dvw
+    if (_resizeDir.includes('w')) dw = -dvw
+    if (_resizeDir.includes('s')) dh = dvh
+    if (_resizeDir.includes('n')) dh = -dvh
+    store.width = Math.max(20, Math.min(95, _resizeStartW + dw))
+    store.height = Math.max(15, Math.min(90, _resizeStartH + dh))
+    positionPanel()
+  }
+
+  function onPanelResizeEnd() {
+    _resizeActive = false
+    iframeCache.forEach(f => { f.style.pointerEvents = '' })
+    if (_resizeOverlay) { _resizeOverlay.remove(); _resizeOverlay = null }
+    document.removeEventListener('pointermove', onPanelResizeMove)
+    document.removeEventListener('pointerup', onPanelResizeEnd)
+    save()
+  }
+
+  resizeN.onpointerdown = (e) => startPanelResize(e, 'n')
+  resizeS.onpointerdown = (e) => startPanelResize(e, 's')
+  resizeE.onpointerdown = (e) => startPanelResize(e, 'e')
+  resizeW.onpointerdown = (e) => startPanelResize(e, 'w')
+  resizeNE.onpointerdown = (e) => startPanelResize(e, 'ne')
+  resizeNW.onpointerdown = (e) => startPanelResize(e, 'nw')
+  resizeSE.onpointerdown = (e) => startPanelResize(e, 'se')
+  resizeSW.onpointerdown = (e) => startPanelResize(e, 'sw')
 
   // ===== WebSocket (birpc): dock list sync + logs + server broadcasts =====
   const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
