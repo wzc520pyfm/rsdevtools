@@ -73,8 +73,11 @@ function init() {
     { id: '~terminals', title: 'Terminals', icon: 'ph:terminal-duotone', type: '~builtin', url: `${DEVTOOLS_URL}/dock/terminals`, category: '~builtin' },
     { id: '~logs', title: 'Logs & Notifications', icon: 'ph:notification-duotone', type: '~builtin', url: `${DEVTOOLS_URL}/dock/logs`, category: '~builtin' },
     { id: '~settings', title: 'Settings', icon: 'ph:gear-duotone', type: '~builtin', url: `${DEVTOOLS_URL}/dock/settings`, category: '~builtin' },
-    { id: '~popup', title: 'Popup', icon: 'ph:arrow-square-out-duotone', type: '~popup', category: '~builtin' },
   ]
+  const _pip = (window as any).documentPictureInPicture
+  if (_pip?.requestWindow) {
+    BUILTIN_DOCKS.push({ id: '~popup', title: 'Popup', icon: 'ph:arrow-square-out-duotone', type: '~popup', category: '~builtin' })
+  }
   DOCKS = DOCKS.concat(BUILTIN_DOCKS)
 
   // ===== State =====
@@ -508,6 +511,160 @@ function init() {
     panelLauncher.appendChild(btn)
   }
 
+  // ===== Document Picture-in-Picture Popup =====
+  let pipWindow: Window | null = null
+  let isPopupOpen = false
+
+  function closePiPPopup() {
+    if (pipWindow && !pipWindow.closed) pipWindow.close()
+    pipWindow = null
+    isPopupOpen = false
+    root.style.display = ''
+    resetInactiveTimer()
+  }
+
+  function mountPopupStandalone(popup: Window) {
+    popup.document.title = 'Rspack DevTools'
+    const style = popup.document.createElement('style')
+    style.textContent = [
+      'html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#111;font-family:system-ui,-apple-system,sans-serif;color-scheme:dark;}',
+      '.rdt-root{display:grid;grid-template-columns:48px 1fr;width:100vw;height:100vh;}',
+      '.rdt-sidebar{display:flex;flex-direction:column;border-right:1px solid rgba(136,136,136,0.13);background:rgba(17,17,17,0.95);}',
+      '.rdt-logo{padding:8px;border-bottom:1px solid rgba(136,136,136,0.13);display:flex;align-items:center;justify-content:center;}',
+      '.rdt-entries{flex:1;display:flex;flex-direction:column;gap:2px;padding:4px;overflow-y:auto;}',
+      '.rdt-footer{padding:4px;border-top:1px solid rgba(136,136,136,0.13);}',
+      '.rdt-btn{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;transition:all 200ms;margin:0 auto;padding:0;}',
+      '.rdt-btn:hover{color:rgba(255,255,255,0.85);background:rgba(136,136,136,0.1);}',
+      '.rdt-btn.active{color:#60a5fa;background:rgba(96,165,250,0.1);}',
+      '.rdt-sep{border-bottom:1px solid rgba(136,136,136,0.13);margin:4px 0;}',
+      '.rdt-content{width:100%;height:100%;overflow:hidden;position:relative;}',
+      '.rdt-content iframe{width:100%;height:100%;border:none;background:transparent;}',
+      '.rdt-launcher{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;color:rgba(255,255,255,0.8);box-sizing:border-box;}',
+    ].join('\n')
+    popup.document.head.appendChild(style)
+    popup.document.body.textContent = ''
+
+    const rootEl = popup.document.createElement('div')
+    rootEl.className = 'rdt-root'
+    const sidebar = popup.document.createElement('div')
+    sidebar.className = 'rdt-sidebar'
+    const logoEl = popup.document.createElement('div')
+    logoEl.className = 'rdt-logo'
+    logoEl.innerHTML = makeSVG('rspack-logo')
+    sidebar.appendChild(logoEl)
+
+    const entriesEl = popup.document.createElement('div')
+    entriesEl.className = 'rdt-entries'
+    const contentEl = popup.document.createElement('div')
+    contentEl.className = 'rdt-content'
+
+    const popupDocks = DOCKS.filter(d => d.type !== '~popup')
+    const entryBtns = new Map<string, HTMLButtonElement>()
+    const pipIframes = new Map<string, HTMLIFrameElement>()
+    let activeId: string | null = null
+
+    function switchEntry(dock: DockEntry) {
+      activeId = dock.id
+      entryBtns.forEach((b, id) => { b.className = `rdt-btn${id === dock.id ? ' active' : ''}` })
+      pipIframes.forEach(f => { f.style.display = 'none' })
+      const existing = contentEl.querySelector('.rdt-launcher')
+      if (existing) existing.remove()
+
+      if (dock.type === 'iframe' || dock.type === '~builtin') {
+        let url = dock.url || DEVTOOLS_URL
+        url = appendAuthParam(url)
+        let iframe = pipIframes.get(dock.id)
+        if (!iframe) {
+          iframe = popup.document.createElement('iframe')
+          iframe.setAttribute('allowtransparency', 'true')
+          iframe.addEventListener('load', () => {
+            try {
+              const doc = iframe!.contentDocument
+              if (doc) { const s = doc.createElement('style'); s.textContent = 'html,html.dark,html.light,body,#__nuxt{background:transparent!important;}'; doc.head.appendChild(s) }
+            } catch {}
+          })
+          iframe.src = url
+          contentEl.appendChild(iframe)
+          pipIframes.set(dock.id, iframe)
+        }
+        iframe.style.display = 'block'
+      } else if (dock.type === 'launcher') {
+        const c = popup.document.createElement('div')
+        c.className = 'rdt-launcher'
+        const ic = popup.document.createElement('div')
+        ic.style.cssText = 'margin-bottom:16px;'
+        ic.innerHTML = renderIcon(dock.icon, 48)
+        if (ic.firstChild) (ic.firstChild as HTMLElement).style.color = 'rgba(255,255,255,0.5)'
+        const t = popup.document.createElement('h3')
+        t.style.cssText = 'font-size:18px;font-weight:600;color:rgba(255,255,255,0.9);margin:0 0 8px;'
+        t.textContent = dock.launcher?.title || dock.title || 'Launcher'
+        const d = popup.document.createElement('p')
+        d.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.5);margin:0 0 24px;'
+        d.textContent = dock.launcher?.description || ''
+        const b = popup.document.createElement('button')
+        b.style.cssText = 'padding:8px 24px;border-radius:8px;border:none;background:#a78bfa;color:white;font-size:14px;font-weight:500;cursor:pointer;transition:all 200ms;'
+        b.textContent = dock.launcher?.buttonStart || 'Launch'
+        b.onclick = () => {
+          b.textContent = dock.launcher?.buttonLoading || 'Loading...'
+          b.disabled = true; b.style.opacity = '0.6'
+          fetch(`${DEVTOOLS_URL}/.devtools/api/launch/${encodeURIComponent(dock.id)}`, { method: 'POST' })
+            .then(async (res) => { if (!res.ok) throw new Error('fail'); await refreshUserDocks(); b.textContent = 'Done'; b.style.background = '#22c55e' })
+            .catch(() => { b.textContent = 'Error'; b.style.background = '#ef4444' })
+        }
+        c.appendChild(ic); c.appendChild(t); c.appendChild(d); c.appendChild(b)
+        contentEl.appendChild(c)
+      }
+    }
+
+    let lastCat: string | undefined
+    for (const dock of popupDocks) {
+      if (lastCat !== undefined && dock.category !== lastCat) {
+        const sep = popup.document.createElement('div')
+        sep.className = 'rdt-sep'
+        entriesEl.appendChild(sep)
+      }
+      lastCat = dock.category
+      const btn = popup.document.createElement('button')
+      btn.className = 'rdt-btn'
+      btn.title = dock.title
+      btn.innerHTML = renderIcon(dock.icon, 18)
+      btn.onclick = () => switchEntry(dock)
+      entryBtns.set(dock.id, btn)
+      entriesEl.appendChild(btn)
+    }
+
+    sidebar.appendChild(entriesEl)
+    rootEl.appendChild(sidebar)
+    rootEl.appendChild(contentEl)
+    popup.document.body.appendChild(rootEl)
+
+    if (popupDocks.length > 0) switchEntry(popupDocks[0])
+  }
+
+  async function openPiPPopup() {
+    const pip = (window as any).documentPictureInPicture
+    if (!pip?.requestWindow) return
+
+    if (pipWindow && !pipWindow.closed) { pipWindow.focus(); return }
+
+    try {
+      const popup = await pip.requestWindow({
+        width: Math.max(320, Math.round(window.innerWidth * store.width / 100)),
+        height: Math.max(240, Math.round(window.innerHeight * store.height / 100)),
+      })
+      pipWindow = popup
+      isPopupOpen = true
+      closePanel()
+      root.style.display = 'none'
+      mountPopupStandalone(popup)
+      popup.addEventListener('pagehide', () => { if (pipWindow === popup) closePiPPopup() })
+    } catch {
+      if (pipWindow && !pipWindow.closed) pipWindow.close()
+      pipWindow = null
+      isPopupOpen = false
+    }
+  }
+
   // ===== Dock click handler =====
   function handleDockClick(dock: DockEntry | undefined) {
     if (!dock) return
@@ -520,7 +677,7 @@ function init() {
     }
 
     if (dock.type === '~popup') {
-      window.open(DEVTOOLS_URL, 'rspack-devtools', 'width=1200,height=800')
+      openPiPPopup()
       return
     }
 
