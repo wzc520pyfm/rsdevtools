@@ -180,6 +180,13 @@ function init() {
       const id = btn.dataset.dockId
       handleDockClick(DOCKS.find(d => d.id === id))
     }
+    // Overflow grid lives on `root`, outside `anchor` — anchor pointer-capture + pointerup delegation never runs there.
+    if (!registerInDockButtons) {
+      btn.onclick = (e) => {
+        e.stopPropagation()
+        ;(btn as any)._dockClickHandler?.()
+      }
+    }
     if (registerInDockButtons)
       dockButtons.push({ el: btn, dock })
     return btn
