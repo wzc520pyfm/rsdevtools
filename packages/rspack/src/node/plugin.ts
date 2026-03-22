@@ -55,6 +55,8 @@ export interface DevToolsRspackUIOptions {
 }
 
 const BASE_URL = '/.devtools-rspack/'
+/** Official mark from Rspack branding (https://rspack.dev/misc/branding/guideline). */
+const RSPACK_BUILD_DOCK_ICON = 'https://assets.rspack.rs/rspack/rspack-logo.svg'
 
 export function DevToolsRspackUI(options: DevToolsRspackUIOptions = {}): { devtools: DevToolsPluginOptions } & { name: string } {
   const collector = options.collector ?? new DataCollector()
@@ -71,7 +73,7 @@ export function DevToolsRspackUI(options: DevToolsRspackUIOptions = {}): { devto
           type: 'iframe',
           id: 'rspack-build',
           title: 'Build Analysis',
-          icon: 'ph:lightning-duotone',
+          icon: RSPACK_BUILD_DOCK_ICON,
           category: '~rspackplus',
           url: BASE_URL,
         })

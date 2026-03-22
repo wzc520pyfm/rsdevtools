@@ -66,7 +66,7 @@ function init() {
   let DOCKS: DockEntry[] = REGISTERED_DOCKS.map(normalizeDockEntryFromSerialized)
 
   if (DOCKS.length === 0) {
-    DOCKS = [{ id: 'rspack-build', title: 'Build Analysis', icon: 'ph:lightning-duotone', type: 'iframe', url: DEVTOOLS_URL, category: '~rspackplus' }]
+    DOCKS = [{ id: 'rspack-build', title: 'Build Analysis', icon: 'https://assets.rspack.rs/rspack/rspack-logo.svg', type: 'iframe', url: DEVTOOLS_URL, category: '~rspackplus' }]
   }
 
   const BUILTIN_DOCKS: DockEntry[] = [
@@ -90,6 +90,23 @@ function init() {
   try { store = Object.assign({}, defaults, JSON.parse(localStorage.getItem(STORAGE_KEY)!)) }
   catch { store = Object.assign({}, defaults) }
   function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)) } catch {} }
+
+  function isDockVertical(): boolean {
+    return store.position === 'left' || store.position === 'right'
+  }
+  /**
+   * Left/right dock rotates the bar 90°; counter-rotate icon buttons so glyphs stay screen-upright.
+   * Brackets stay unrotated (separate elements). Overflow-popup entries use counterRotate: false.
+   * Self Inspect (`~self-inspect`) keeps the bar rotation only — its icon already reads correctly.
+   */
+  function setDockBarIconTransform(
+    el: HTMLElement,
+    opts: { selected?: boolean, hover?: boolean, counterRotate?: boolean },
+  ) {
+    const counter = opts.counterRotate === true && isDockVertical()
+    const scale = opts.selected ? 1.2 : opts.hover ? 1.1 : 1
+    el.style.transform = counter ? `rotate(-90deg) scale(${scale})` : `scale(${scale})`
+  }
 
   // ===== Root =====
   const root = document.createElement('div')
@@ -139,30 +156,29 @@ function init() {
     btn.title = dock.title
     btn.dataset.dockId = dock.id
     btn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;border-radius:12px;transition:all 300ms cubic-bezier(0.34,1.56,0.64,1);padding:0;position:relative;'
-    btn.innerHTML = renderIcon(dock.icon)
+    btn.innerHTML = renderIcon(dock.icon, 20, DEVTOOLS_URL)
+    const counterRotateIcon = registerInDockButtons && dock.id !== '~self-inspect'
     btn.onmouseenter = () => {
-      if (store.selectedDock !== dock.id || !store.open) {
+      btn.dataset.rdtHover = '1'
+      const isSel = store.selectedDock === dock.id && store.open
+      if (!isSel) {
         btn.style.color = 'rgba(255,255,255,0.85)'
         btn.style.background = 'rgba(136,136,136,0.07)'
-        btn.style.transform = 'scale(1.1)'
       }
+      setDockBarIconTransform(btn, { selected: isSel, hover: !isSel, counterRotate: counterRotateIcon })
       showTooltip(btn, dock.title)
     }
     btn.onmouseleave = () => {
-      if (store.selectedDock !== dock.id || !store.open) {
-        btn.style.color = 'rgba(255,255,255,0.5)'
-        btn.style.background = 'transparent'
-        btn.style.transform = 'scale(1)'
-      }
+      delete btn.dataset.rdtHover
+      const isSel = store.selectedDock === dock.id && store.open
+      btn.style.color = isSel ? '#a78bfa' : 'rgba(255,255,255,0.5)'
+      btn.style.background = isSel ? 'rgba(136,136,136,0.07)' : 'transparent'
+      setDockBarIconTransform(btn, { selected: isSel, hover: false, counterRotate: counterRotateIcon })
       hideTooltip()
     }
     ;(btn as any)._dockClickHandler = () => {
       const id = btn.dataset.dockId
       handleDockClick(DOCKS.find(d => d.id === id))
-    }
-    btn.onclick = (e) => {
-      e.stopPropagation()
-      ;(btn as any)._dockClickHandler?.()
     }
     if (registerInDockButtons)
       dockButtons.push({ el: btn, dock })
@@ -241,34 +257,25 @@ function init() {
     overflowBtnEl.appendChild(badge)
 
     updateBadgePosition = () => {
-      if (isVertical()) {
-        badge.style.top = '-2px'; badge.style.left = '-3px'
-        badge.style.right = 'auto'; badge.style.bottom = 'auto'
-        badge.style.transform = 'rotate(-90deg)'
-      }
-      else {
-        badge.style.top = '-2px'; badge.style.right = '-3px'
-        badge.style.left = 'auto'; badge.style.bottom = 'auto'
-        badge.style.transform = 'none'
-      }
+      badge.style.top = '-2px'; badge.style.right = '-3px'
+      badge.style.left = 'auto'; badge.style.bottom = 'auto'
+      badge.style.transform = 'none'
     }
 
     const _overflowBtnEl = overflowBtnEl
     overflowBtnEl.onmouseenter = () => {
+      _overflowBtnEl.dataset.rdtHover = '1'
       _overflowBtnEl.style.color = 'rgba(255,255,255,0.85)'
       _overflowBtnEl.style.background = 'rgba(136,136,136,0.07)'
-      _overflowBtnEl.style.transform = 'scale(1.1)'
+      setDockBarIconTransform(_overflowBtnEl, { hover: true, counterRotate: true })
     }
     overflowBtnEl.onmouseleave = () => {
+      delete _overflowBtnEl.dataset.rdtHover
       _overflowBtnEl.style.color = 'rgba(255,255,255,0.45)'
       _overflowBtnEl.style.background = 'transparent'
-      _overflowBtnEl.style.transform = 'scale(1)'
+      setDockBarIconTransform(_overflowBtnEl, { hover: false, counterRotate: true })
     }
     ;(overflowBtnEl as any)._dockClickHandler = () => { toggleOverflowPopup() }
-    overflowBtnEl.onclick = (e) => {
-      e.stopPropagation()
-      ;(overflowBtnEl as any)._dockClickHandler?.()
-    }
     dockEntriesEl.appendChild(overflowBtnEl)
 
     overflowPopup = document.createElement('div')
@@ -338,8 +345,7 @@ function init() {
   function showTooltip(el: HTMLElement, text: string) {
     tooltip.textContent = text
     const r = el.getBoundingClientRect()
-    const isVert = store.position === 'left' || store.position === 'right'
-    if (isVert) {
+    if (isDockVertical()) {
       tooltip.style.left = `${store.position === 'left' ? r.right + 8 : r.left - 8}px`
       tooltip.style.top = `${r.top + r.height / 2}px`
       tooltip.style.transform = store.position === 'left' ? 'translateY(-50%)' : 'translate(-100%,-50%)'
@@ -476,7 +482,7 @@ function init() {
     panelLauncher.innerHTML = ''
     const icon = document.createElement('div')
     icon.style.cssText = 'margin-bottom:16px;'
-    icon.innerHTML = renderIcon(dock.icon, 48)
+    icon.innerHTML = renderIcon(dock.icon, 48, DEVTOOLS_URL)
     icon.firstChild && ((icon.firstChild as HTMLElement).style.color = 'rgba(255,255,255,0.5)')
     const title = document.createElement('h3')
     title.style.cssText = 'font-size:18px;font-weight:600;color:rgba(255,255,255,0.9);margin:0 0 8px;'
@@ -593,7 +599,7 @@ function init() {
         c.className = 'rdt-launcher'
         const ic = popup.document.createElement('div')
         ic.style.cssText = 'margin-bottom:16px;'
-        ic.innerHTML = renderIcon(dock.icon, 48)
+        ic.innerHTML = renderIcon(dock.icon, 48, DEVTOOLS_URL)
         if (ic.firstChild) (ic.firstChild as HTMLElement).style.color = 'rgba(255,255,255,0.5)'
         const t = popup.document.createElement('h3')
         t.style.cssText = 'font-size:18px;font-weight:600;color:rgba(255,255,255,0.9);margin:0 0 8px;'
@@ -627,7 +633,7 @@ function init() {
       const btn = popup.document.createElement('button')
       btn.className = 'rdt-btn'
       btn.title = dock.title
-      btn.innerHTML = renderIcon(dock.icon, 18)
+      btn.innerHTML = renderIcon(dock.icon, 18, DEVTOOLS_URL)
       btn.onclick = () => switchEntry(dock)
       entryBtns.set(dock.id, btn)
       entriesEl.appendChild(btn)
@@ -805,13 +811,19 @@ function init() {
   anchor.onmouseleave = () => { glow.style.opacity = '0'; resetInactiveTimer() }
   anchor.onmousemove = () => { if (!isMinimized) resetInactiveTimer() }
 
-  function isVertical(): boolean { return store.position === 'left' || store.position === 'right' }
-
   function positionAnchor() {
     const p = store.position
     const m = 2
     anchor.style.left = 'auto'; anchor.style.right = 'auto'; anchor.style.top = 'auto'; anchor.style.bottom = 'auto'
-    dockContainer.style.transform = isVertical() ? 'translate(-50%,-50%) rotate(90deg)' : 'translate(-50%,-50%)'
+    dockContainer.style.transform = isDockVertical() ? 'translate(-50%,-50%) rotate(90deg)' : 'translate(-50%,-50%)'
+    miniLogo.style.transform = isDockVertical()
+      ? 'translate(-50%,-50%) rotate(-90deg)'
+      : 'translate(-50%,-50%)'
+    if (overflowBtnEl) {
+      const hover = overflowBtnEl.dataset.rdtHover === '1'
+      setDockBarIconTransform(overflowBtnEl, { hover, counterRotate: true })
+    }
+    updateDockButtons()
     const halfH = 20
     const off = store.anchorOffset
     if (p === 'left') { anchor.style.left = `${m + halfH}px`; anchor.style.top = `${off}%` }
@@ -865,7 +877,9 @@ function init() {
       const isSelected = store.selectedDock === id && store.open
       item.el.style.color = isSelected ? '#a78bfa' : 'rgba(255,255,255,0.5)'
       item.el.style.background = isSelected ? 'rgba(136,136,136,0.07)' : 'transparent'
-      item.el.style.transform = isSelected ? 'scale(1.2)' : 'scale(1)'
+      const hover = item.el.dataset.rdtHover === '1'
+      const counterRotate = id !== '~self-inspect'
+      setDockBarIconTransform(item.el, { selected: isSelected, hover, counterRotate })
     })
   }
 
@@ -881,7 +895,7 @@ function init() {
       const dock = DOCKS.find(x => x.id === id)
       if (!dock) return
       el.title = dock.title
-      el.innerHTML = renderIcon(dock.icon)
+      el.innerHTML = renderIcon(dock.icon, 20, DEVTOOLS_URL)
     })
     if (overflowGridEl && overflowBtnEl) {
       overflowGridEl.innerHTML = ''
@@ -972,8 +986,8 @@ function init() {
   connectWs()
 
   // ===== Drag =====
-  let isDragging = false
-  let wasDragging = false
+  let dragPointerActive = false
+  let didMeaningfulDrag = false
   let dragStartX = 0
   let dragStartY = 0
   let dragStartTarget: EventTarget | null = null
@@ -982,24 +996,15 @@ function init() {
     if (e.button !== 0) return
     dragStartX = e.clientX; dragStartY = e.clientY
     dragStartTarget = e.target
-    // Only capture for drag when target is NOT a dock button (let buttons receive click via onclick)
-    let el = e.target as HTMLElement | null
-    let hasHandler = false
-    while (el && el !== anchor) {
-      if ((el as any)._dockClickHandler) { hasHandler = true; break }
-      el = el.parentElement
-    }
-    if (!hasHandler) {
-      isDragging = true
-      wasDragging = false
-      anchor.setPointerCapture(e.pointerId)
-      e.preventDefault()
-    }
+    dragPointerActive = true
+    didMeaningfulDrag = false
+    anchor.setPointerCapture(e.pointerId)
+    e.preventDefault()
   }
   anchor.onpointermove = (e: PointerEvent) => {
-    if (!isDragging) return
-    if (Math.abs(e.clientX - dragStartX) > 4 || Math.abs(e.clientY - dragStartY) > 4) wasDragging = true
-    if (!wasDragging) return
+    if (!dragPointerActive) return
+    if (Math.abs(e.clientX - dragStartX) > 4 || Math.abs(e.clientY - dragStartY) > 4) didMeaningfulDrag = true
+    if (!didMeaningfulDrag) return
     dockContainer.style.transition = 'none'
     const cx = e.clientX
     const cy = e.clientY
@@ -1023,11 +1028,11 @@ function init() {
     save()
   }
   anchor.onpointerup = (e: PointerEvent) => {
-    const wasClick = isDragging && !wasDragging
-    isDragging = false
-    anchor.releasePointerCapture(e.pointerId)
+    const shouldDelegateClick = dragPointerActive && !didMeaningfulDrag
+    dragPointerActive = false
+    try { anchor.releasePointerCapture(e.pointerId) } catch { /* already released */ }
     dockContainer.style.transition = 'all 500ms cubic-bezier(0.34,1.56,0.64,1)'
-    if (wasClick && dragStartTarget) {
+    if (shouldDelegateClick && dragStartTarget) {
       let el = dragStartTarget as HTMLElement | null
       while (el && el !== anchor) {
         if ((el as any)._dockClickHandler) { (el as any)._dockClickHandler(); break }
@@ -1035,6 +1040,13 @@ function init() {
       }
     }
     dragStartTarget = null
+  }
+  anchor.onpointercancel = (e: PointerEvent) => {
+    dragPointerActive = false
+    didMeaningfulDrag = false
+    dragStartTarget = null
+    try { anchor.releasePointerCapture(e.pointerId) } catch { /* */ }
+    dockContainer.style.transition = 'all 500ms cubic-bezier(0.34,1.56,0.64,1)'
   }
 
   // ===== Keyboard =====
@@ -1050,7 +1062,6 @@ function init() {
 
   // ===== Init =====
   positionAnchor()
-  updateDockButtons()
   if (CLIENT_AUTH_ENABLED && !isRpcTrusted) {
     setDockButtonsVisible(false)
   }

@@ -1,5 +1,13 @@
 type IconRenderer = (size: number) => string
 
+function resolveDockIconSrc(icon: string, assetBaseUrl?: string): string | null {
+  if (icon.startsWith('http://') || icon.startsWith('https://') || icon.startsWith('data:'))
+    return icon
+  if (assetBaseUrl && icon.startsWith('/'))
+    return `${assetBaseUrl.replace(/\/$/, '')}${icon}`
+  return null
+}
+
 const builtinIcons: Record<string, IconRenderer> = {
   'ph:lightning-duotone': s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor"/></svg>`,
   'ph:folder-open-duotone': s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" fill="currentColor" opacity="0.85"/></svg>`,
@@ -16,7 +24,12 @@ const builtinIcons: Record<string, IconRenderer> = {
   'ph:rocket-launch-duotone': s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z" fill="currentColor" opacity="0.3"/><path d="M12 13l-3-3" stroke="currentColor" stroke-width="1.5"/><path d="M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
 }
 
-export function renderIcon(iconName: string, size: number = 20): string {
+export function renderIcon(iconName: string, size: number = 20, assetBaseUrl?: string): string {
+  const src = resolveDockIconSrc(iconName, assetBaseUrl)
+  if (src) {
+    const esc = src.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    return `<img src="${esc}" alt="" width="${size}" height="${size}" draggable="false" style="display:block;object-fit:contain;pointer-events:none;" />`
+  }
   if (builtinIcons[iconName]) return builtinIcons[iconName](size)
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" opacity="0.5"/></svg>`
 }
