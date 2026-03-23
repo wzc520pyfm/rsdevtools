@@ -1,72 +1,129 @@
 <script setup lang="ts">
 import type { BuildSession } from '../../../../shared/types'
 import { formatBytes } from '@rspack-devtools/ui/utils/format'
+import { computed } from 'vue'
 
 const session = inject<Ref<BuildSession | null>>('session')!
+
+interface DataTableItem {
+  title: string
+  value: string | number | Date
+  type?: 'string' | 'number' | 'duration' | 'badge' | 'error' | 'warning'
+  icon: string
+}
+
+const dataTable = computed<DataTableItem[]>(() => {
+  if (!session.value)
+    return []
+  return [
+    {
+      title: 'Build ID',
+      value: session.value.id,
+      icon: 'i-ph-hash-duotone',
+    },
+    {
+      title: 'Created At',
+      value: new Date(session.value.timestamp),
+      icon: 'i-ph-clock-duotone',
+    },
+    {
+      title: 'Build Duration',
+      value: session.value.duration,
+      icon: 'i-ph-timer-duotone',
+      type: 'duration',
+    },
+    {
+      title: 'Directory',
+      value: session.value.cwd,
+      icon: 'i-ph-folder-duotone',
+    },
+    {
+      title: 'Total Modules',
+      value: session.value.modules.length,
+      icon: 'i-ph-files-duotone',
+      type: 'number',
+    },
+    {
+      title: 'Plugins',
+      value: session.value.plugins.length,
+      icon: 'i-ph-plugs-duotone',
+      type: 'number',
+    },
+    {
+      title: 'Platform',
+      value: session.value.target,
+      icon: 'i-ph-cpu-duotone',
+      type: 'badge',
+    },
+    {
+      title: 'Format',
+      value: session.value.outputType,
+      icon: 'i-ph-file-duotone',
+      type: 'badge',
+    },
+    {
+      title: 'Errors',
+      value: session.value.errors.length,
+      icon: 'i-ph-warning-circle-duotone',
+      type: 'error',
+    },
+    {
+      title: 'Warnings',
+      value: session.value.warnings.length,
+      icon: 'i-ph-warning-duotone',
+      type: 'warning',
+    },
+  ]
+})
 </script>
 
 <template>
-  <div v-if="session" flex="~ col gap-6">
-    <div flex="~ items-center gap-2">
+  <div v-if="session" flex="~ col gap-6" p6>
+    <div flex="~ gap-2">
       <NuxtLink to="/" btn-action text-sm>
-        <div i-ph-arrow-left />
+        <div i-ph-arrow-bend-up-left-duotone />
         Re-select Session
       </NuxtLink>
     </div>
 
     <!-- Meta Info -->
     <section>
-      <h3 text-sm op50 mb2>
+      <div op50 mb2>
         Meta Info
-      </h3>
-      <div border="~ base" rounded-lg p4 flex="~ col gap-2">
-        <div flex="~ gap-4" items-center>
-          <span op50 w-36 text-sm># Build ID</span>
-          <span font-mono text-sm>{{ session.id }}</span>
-        </div>
-        <div flex="~ gap-4" items-center>
-          <span op50 w-36 text-sm>Created At</span>
-          <span font-mono text-sm>{{ new Date(session.timestamp).toLocaleString() }}</span>
-        </div>
-        <div flex="~ gap-4" items-center>
-          <span op50 w-36 text-sm>Build Duration</span>
-          <DisplayDuration :duration="session.duration" />
-        </div>
-        <div flex="~ gap-4" items-center>
-          <span op50 w-36 text-sm>Directory</span>
-          <span font-mono text-sm break-all>{{ session.cwd }}</span>
-        </div>
-        <div flex="~ gap-4" items-center>
-          <span op50 w-36 text-sm>Total Modules</span>
-          <DisplayNumberBadge :number="session.modules.length" />
-        </div>
-        <div flex="~ gap-4" items-center>
-          <span op50 w-36 text-sm>Plugins</span>
-          <DisplayNumberBadge :number="session.plugins.length" />
-        </div>
-        <div flex="~ gap-4" items-center>
-          <span op50 w-36 text-sm>Errors</span>
-          <DisplayNumberBadge
-            :number="session.errors.length"
-            :color="session.errors.length > 0 ? 'badge-color-red' : 'badge-color-gray op75'"
-          />
-        </div>
-        <div flex="~ gap-4" items-center>
-          <span op50 w-36 text-sm>Warnings</span>
-          <DisplayNumberBadge
-            :number="session.warnings.length"
-            :color="session.warnings.length > 0 ? 'badge-color-yellow' : 'badge-color-gray op75'"
-          />
-        </div>
+      </div>
+      <div border="~ base rounded" p4 grid="~ cols-[max-content_160px_2fr] gap-2 items-center">
+        <template v-for="item of dataTable" :key="item.title">
+          <div :class="item.icon" />
+          <div>
+            {{ item.title }}
+          </div>
+          <div font-mono>
+            <time v-if="(item.value instanceof Date)" :datetime="item.value.toISOString()">{{ item.value.toLocaleString() }}</time>
+            <DisplayDuration v-else-if="item.type === 'duration'" :duration="+item.value" />
+            <DisplayBadge v-else-if="item.type === 'badge'" :text="String(item.value)" py1 />
+            <DisplayNumberBadge
+              v-else-if="item.type === 'error'"
+              :number="+item.value"
+              :color="+item.value > 0 ? 'badge-color-red' : 'badge-color-gray op75'"
+            />
+            <DisplayNumberBadge
+              v-else-if="item.type === 'warning'"
+              :number="+item.value"
+              :color="+item.value > 0 ? 'badge-color-yellow' : 'badge-color-gray op75'"
+            />
+            <DisplayNumberBadge v-else-if="typeof item.value === 'number'" :number="item.value" py1 rounded-full inline-block text-sm />
+            <span v-else>{{ item.value }}</span>
+          </div>
+        </template>
       </div>
     </section>
 
     <!-- Build Entries -->
     <section v-if="session.entrypoints.length">
-      <h3 text-sm op50 mb2>
+      <div op50 mb2>
         Build Entries
-      </h3>
-      <div border="~ base" rounded-lg p4>
+      </div>
+      <div border="~ base rounded" p4>
         <div v-for="entry in session.entrypoints" :key="entry.name" flex="~ gap-2 items-center" py1>
           <div i-ph-file-code text-sm op50 />
           <span font-mono text-sm>{{ entry.name }}</span>
@@ -78,9 +135,9 @@ const session = inject<Ref<BuildSession | null>>('session')!
 
     <!-- Views -->
     <section>
-      <h3 text-sm op50 mb2>
+      <div op50 mb2>
         Views
-      </h3>
+      </div>
       <div grid grid-cols-5 gap-3>
         <NuxtLink
           :to="`/session/${session.id}/graph`"

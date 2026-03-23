@@ -29,7 +29,7 @@ export class DataCollector {
     return this.cwd
   }
 
-  collectFromStats(statsJson: any, pluginNames: string[]): BuildSession {
+  collectFromStats(statsJson: any, pluginNames: string[], compilerOptions?: { target?: string; outputType?: string }): BuildSession {
     const sessionId = `build-${++sessionCounter}-${Date.now()}`
     const timestamp = Date.now()
 
@@ -49,6 +49,8 @@ export class DataCollector {
       duration,
       hash: statsJson.hash ?? '',
       cwd: this.cwd,
+      target: compilerOptions?.target ?? 'web',
+      outputType: compilerOptions?.outputType ?? 'commonjs',
       errors,
       warnings,
       modules,

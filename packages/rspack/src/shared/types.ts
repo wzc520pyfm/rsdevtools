@@ -4,6 +4,8 @@ export interface BuildSession {
   duration: number
   hash: string
   cwd: string
+  target: string
+  outputType: string
   errors: BuildError[]
   warnings: BuildWarning[]
   modules: ModuleData[]

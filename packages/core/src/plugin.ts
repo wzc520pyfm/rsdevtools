@@ -75,7 +75,14 @@ export class RspackDevToolsPlugin {
         source: true,
       })
 
-      const session = this.collector.collectFromStats(statsJson, pluginNames)
+      const target = Array.isArray(compiler.options.target)
+        ? compiler.options.target.join(', ')
+        : (compiler.options.target ?? 'web') as string
+
+      const output = compiler.options.output ?? {}
+      const outputType = (output as any).module ? 'esm' : ((output as any).library?.type ?? 'commonjs')
+
+      const session = this.collector.collectFromStats(statsJson, pluginNames, { target, outputType })
 
       if (!server) {
         try {
