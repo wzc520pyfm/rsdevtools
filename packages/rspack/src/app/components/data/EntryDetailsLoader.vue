@@ -36,8 +36,8 @@ const entryModules = computed<ModuleData[]>(() => {
   return session.value.modules.filter(m => moduleIds.has(m.id))
 })
 
-type ViewType = 'overview' | 'chunks' | 'modules'
-const viewType = ref<ViewType>('overview')
+const expandChunks = ref(true)
+const expandAssets = ref(true)
 
 const route = useRoute()
 
@@ -93,147 +93,135 @@ function openAsset(assetName: string) {
           {{ formatBytes(entry.size) }}
         </span>
       </div>
-      <div flex="~ gap-2">
-        <button
-          :class="viewType === 'overview' ? 'text-primary' : ''"
-          flex="~ gap-2 items-center justify-center"
-          px2 py1 w-40
-          border="~ base rounded-lg"
-          hover="bg-active"
-          @click="viewType = 'overview'"
-        >
-          <div i-ph-list-bullets-duotone />
-          Overview
-        </button>
-        <button
-          :class="viewType === 'chunks' ? 'text-primary' : ''"
-          flex="~ gap-2 items-center justify-center"
-          px2 py1 w-40
-          border="~ base rounded-lg"
-          hover="bg-active"
-          @click="viewType = 'chunks'"
-        >
-          <div i-ph-stack-duotone />
-          Chunks
-        </button>
-        <button
-          :class="viewType === 'modules' ? 'text-primary' : ''"
-          flex="~ gap-2 items-center justify-center"
-          px2 py1 w-40
-          border="~ base rounded-lg"
-          hover="bg-active"
-          @click="viewType = 'modules'"
-        >
-          <div i-ph-files-duotone />
-          Modules
-        </button>
-      </div>
     </div>
 
-    <!-- Content area -->
-    <div of-auto h-full pt-30 px-4 pb-4>
-      <!-- Overview tab -->
-      <div v-if="viewType === 'overview'" flex="~ col gap-4">
-        <!-- Assets -->
-        <div v-if="entry.assets?.length">
-          <h4 text-sm op50 mb2 flex="~ items-center gap-1">
-            <div i-ph-file-duotone />
-            Assets ({{ entry.assets.length }})
-          </h4>
-          <div border="~ base" rounded-lg of-hidden>
-            <div
-              v-for="asset in entry.assets" :key="asset.name"
-              flex="~ gap-2 items-center" px3 py2 border="b base last:b-0"
-              cursor-pointer hover="bg-active"
-              @click="openAsset(asset.name)"
-            >
-              <div i-ph-file-duotone text-sm op50 />
-              <span font-mono text-xs break-all flex-1>{{ asset.name }}</span>
-              <DisplayBadge text="asset" />
-              <span text-xs op50>{{ formatBytes(asset.size) }}</span>
-            </div>
-          </div>
+    <!-- Flowmap timeline content -->
+    <div of-auto h-full pt-24 p4>
+      <div select-none of-visible>
+        <!-- Entry root node -->
+        <div flex="~">
+          <FlowmapNode :lines="{ bottom: true }">
+            <template #content>
+              <div i-ph-file-code text-sm />
+              <span font-mono text-sm>{{ entry.name }}</span>
+              <DisplayBadge text="entry" :color="120" />
+              <span text-xs op50>{{ formatBytes(entry.size) }}</span>
+            </template>
+          </FlowmapNode>
         </div>
 
-        <!-- Chunks summary -->
-        <div v-if="entryChunks.length">
-          <h4 text-sm op50 mb2 flex="~ items-center gap-1">
+        <!-- Chunks section -->
+        <FlowmapExpandable
+          v-model:expanded="expandChunks"
+          :expandable="entryChunks.length > 0"
+          :class-root-node="entryChunks.length === 0 ? 'border-dashed' : ''"
+          :active-start="true"
+          :active-end="true"
+        >
+          <template #node>
             <div i-ph-stack-duotone />
-            Chunks ({{ entryChunks.length }})
-          </h4>
-          <div border="~ base" rounded-lg of-hidden>
+            Chunk
+            <span op50 text-xs>({{ entryChunks.length }})</span>
+          </template>
+          <template #container>
+            <div>
+              <FlowmapNode
+                v-for="chunk of entryChunks"
+                :key="chunk.id"
+                :lines="{ top: true }"
+                class-node-inline="gap-2 items-center"
+                pl6
+              >
+                <template #inner>
+                  <button
+                    px3 py1 hover="bg-active" flex="~ inline gap-2 items-center"
+                    @click="openChunk(chunk.id)"
+                  >
+                    <div flex="~ col gap-1 items-start" p1>
+                      <div flex="~ gap-2 items-center">
+                        <DisplayBadge :text="chunk.names.length ? chunk.names.join(', ') : `chunk`" />
+                        <div op50 font-mono text-sm>
+                          #{{ chunk.id }}
+                        </div>
+                      </div>
+                      <div text-sm>
+                        {{ chunk.moduleCount }} modules
+                      </div>
+                    </div>
+                  </button>
+                </template>
+                <template #inline-after>
+                  <DisplayBadge v-if="chunk.entry" text="entry" :color="120" />
+                  <DisplayBadge v-if="chunk.initial" text="initial" :color="200" />
+                </template>
+              </FlowmapNode>
+            </div>
+          </template>
+        </FlowmapExpandable>
+
+        <!-- Assets section -->
+        <FlowmapExpandable
+          v-model:expanded="expandAssets"
+          :lines="{ top: true }"
+          :expandable="entry.assets.length > 0"
+          :class-root-node="entry.assets.length === 0 ? 'border-dashed' : ''"
+          :active-start="true"
+          :active-end="true"
+          :show-tail="false"
+          pl6 pt4
+        >
+          <template #node>
+            <div i-ph-package-duotone />
+            Assets
+            <span op50 text-xs>({{ entry.assets.length }})</span>
+          </template>
+          <template #container>
+            <div>
+              <FlowmapNode
+                v-for="asset of entry.assets"
+                :key="asset.name"
+                :lines="{ top: true }"
+                class-node-inline="gap-2 items-center"
+                pl6
+              >
+                <template #inner>
+                  <button
+                    px3 py1 hover="bg-active" flex="~ inline gap-2 items-center"
+                    @click="openAsset(asset.name)"
+                  >
+                    <div flex="~ gap-2 items-center">
+                      <div i-ph-file-duotone text-sm op50 />
+                      <span font-mono text-sm>{{ asset.name }}</span>
+                    </div>
+                  </button>
+                </template>
+                <template #inline-after>
+                  <span text-xs op50>{{ formatBytes(asset.size) }}</span>
+                  <DisplayBadge text="asset" />
+                </template>
+              </FlowmapNode>
+            </div>
+          </template>
+        </FlowmapExpandable>
+
+        <!-- Modules list (below the flow) -->
+        <div v-if="entryModules.length" mt-8>
+          <div op50 mb2 text-sm flex="~ items-center gap-1">
+            <div i-ph-files-duotone />
+            Modules ({{ entryModules.length }})
+          </div>
+          <div border="~ base" rounded-lg max-h-80 of-auto>
             <div
-              v-for="chunk in entryChunks" :key="chunk.id"
+              v-for="mod in entryModules" :key="mod.id"
               flex="~ gap-2 items-center" px3 py2 border="b base last:b-0"
               cursor-pointer hover="bg-active"
-              @click="openChunk(chunk.id)"
+              @click="openModule(mod.id)"
             >
-              <div i-ph-stack-duotone text-sm op50 />
-              <span font-mono text-xs flex-1>
-                {{ chunk.names.length ? chunk.names.join(', ') : `#${chunk.id}` }}
-              </span>
-              <div flex="~ gap-2 items-center">
-                <DisplayBadge v-if="chunk.entry" text="entry" :color="120" />
-                <DisplayBadge v-if="chunk.initial" text="initial" :color="200" />
-                <span text-xs op50>{{ chunk.moduleCount }} modules</span>
-                <span text-xs op50>{{ formatBytes(chunk.size) }}</span>
-              </div>
+              <div i-ph-file-code text-sm op50 />
+              <span font-mono text-xs break-all flex-1>{{ mod.name }}</span>
+              <span text-xs op50>{{ mod.moduleType }}</span>
+              <span text-xs op50>{{ formatBytes(mod.size) }}</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Chunks tab -->
-      <div v-if="viewType === 'chunks'" flex="~ col gap-4">
-        <div v-for="chunk in entryChunks" :key="chunk.id" border="~ base" rounded-lg of-hidden>
-          <div
-            flex="~ gap-2 items-center" px3 py2 border="b base"
-            cursor-pointer hover="bg-active"
-            @click="openChunk(chunk.id)"
-          >
-            <div i-ph-stack-duotone text-sm op50 />
-            <span font-mono text-sm font-medium flex-1>
-              {{ chunk.names.length ? chunk.names.join(', ') : `Chunk #${chunk.id}` }}
-            </span>
-            <DisplayBadge v-if="chunk.entry" text="entry" :color="120" />
-            <DisplayBadge v-if="chunk.initial" text="initial" :color="200" />
-            <span text-xs op50>{{ formatBytes(chunk.size) }}</span>
-          </div>
-          <div v-if="chunk.files?.length" px3 py2 border="b base">
-            <div text-xs op50 mb1>
-              Files
-            </div>
-            <div flex="~ col gap-1">
-              <div
-                v-for="file in chunk.files" :key="file"
-                flex="~ gap-2 items-center"
-                cursor-pointer hover="op80"
-                @click="openAsset(file)"
-              >
-                <div i-ph-file-duotone text-xs op50 />
-                <span font-mono text-xs>{{ file }}</span>
-              </div>
-            </div>
-          </div>
-          <div px3 py2 text-xs op50>
-            {{ chunk.moduleCount }} modules · {{ formatBytes(chunk.size) }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Modules tab -->
-      <div v-if="viewType === 'modules'">
-        <div border="~ base" rounded-lg of-hidden>
-          <div
-            v-for="mod in entryModules" :key="mod.id"
-            flex="~ gap-2 items-center" px3 py2 border="b base last:b-0"
-            cursor-pointer hover="bg-active"
-            @click="openModule(mod.id)"
-          >
-            <div i-ph-file-code text-sm op50 />
-            <span font-mono text-xs break-all flex-1>{{ mod.name }}</span>
-            <span text-xs op50>{{ mod.moduleType }}</span>
-            <span text-xs op50>{{ formatBytes(mod.size) }}</span>
           </div>
         </div>
       </div>

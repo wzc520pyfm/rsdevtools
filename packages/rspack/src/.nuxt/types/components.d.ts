@@ -42,6 +42,8 @@ interface _GlobalComponents {
   DisplayGraphHoverView: typeof import("../../app/components/display/GraphHoverView.vue")['default']
   DisplayModuleId: typeof import("../../app/components/display/ModuleId.vue")['default']
   DisplayTreeNode: typeof import("../../app/components/display/TreeNode.vue")['default']
+  FlowmapExpandable: typeof import("../../app/components/flowmap/Expandable.vue")['default']
+  FlowmapNode: typeof import("../../app/components/flowmap/Node.vue")['default']
   LogsFilterToggles: typeof import("../../app/components/logs/FilterToggles.vue")['default']
   LogsHashBadge: typeof import("../../app/components/logs/HashBadge.vue")['default']
   LogsLogItem: typeof import("../../app/components/logs/LogItem.vue")['default']
@@ -116,6 +118,8 @@ interface _GlobalComponents {
   LazyDisplayGraphHoverView: LazyComponent<typeof import("../../app/components/display/GraphHoverView.vue")['default']>
   LazyDisplayModuleId: LazyComponent<typeof import("../../app/components/display/ModuleId.vue")['default']>
   LazyDisplayTreeNode: LazyComponent<typeof import("../../app/components/display/TreeNode.vue")['default']>
+  LazyFlowmapExpandable: LazyComponent<typeof import("../../app/components/flowmap/Expandable.vue")['default']>
+  LazyFlowmapNode: LazyComponent<typeof import("../../app/components/flowmap/Node.vue")['default']>
   LazyLogsFilterToggles: LazyComponent<typeof import("../../app/components/logs/FilterToggles.vue")['default']>
   LazyLogsHashBadge: LazyComponent<typeof import("../../app/components/logs/HashBadge.vue")['default']>
   LazyLogsLogItem: LazyComponent<typeof import("../../app/components/logs/LogItem.vue")['default']>

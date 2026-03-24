@@ -42,6 +42,8 @@ export const DisplayFileSizeBadge: typeof import("../app/components/display/File
 export const DisplayGraphHoverView: typeof import("../app/components/display/GraphHoverView.vue")['default']
 export const DisplayModuleId: typeof import("../app/components/display/ModuleId.vue")['default']
 export const DisplayTreeNode: typeof import("../app/components/display/TreeNode.vue")['default']
+export const FlowmapExpandable: typeof import("../app/components/flowmap/Expandable.vue")['default']
+export const FlowmapNode: typeof import("../app/components/flowmap/Node.vue")['default']
 export const LogsFilterToggles: typeof import("../app/components/logs/FilterToggles.vue")['default']
 export const LogsHashBadge: typeof import("../app/components/logs/HashBadge.vue")['default']
 export const LogsLogItem: typeof import("../app/components/logs/LogItem.vue")['default']
@@ -116,6 +118,8 @@ export const LazyDisplayFileSizeBadge: LazyComponent<typeof import("../app/compo
 export const LazyDisplayGraphHoverView: LazyComponent<typeof import("../app/components/display/GraphHoverView.vue")['default']>
 export const LazyDisplayModuleId: LazyComponent<typeof import("../app/components/display/ModuleId.vue")['default']>
 export const LazyDisplayTreeNode: LazyComponent<typeof import("../app/components/display/TreeNode.vue")['default']>
+export const LazyFlowmapExpandable: LazyComponent<typeof import("../app/components/flowmap/Expandable.vue")['default']>
+export const LazyFlowmapNode: LazyComponent<typeof import("../app/components/flowmap/Node.vue")['default']>
 export const LazyLogsFilterToggles: LazyComponent<typeof import("../app/components/logs/FilterToggles.vue")['default']>
 export const LazyLogsHashBadge: LazyComponent<typeof import("../app/components/logs/HashBadge.vue")['default']>
 export const LazyLogsLogItem: LazyComponent<typeof import("../app/components/logs/LogItem.vue")['default']>
