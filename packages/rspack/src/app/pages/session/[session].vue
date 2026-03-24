@@ -25,6 +25,7 @@ watch(sessionId, loadSession, { immediate: true })
 
 const currentPanelType = computed(() => {
   const query = route.query
+  if (query.entry) return 'entry'
   if (query.module) return 'module'
   if (query.asset) return 'asset'
   if (query.plugin) return 'plugin'
@@ -35,6 +36,7 @@ const currentPanelType = computed(() => {
 
 function closePanel() {
   const query = { ...route.query }
+  delete query.entry
   delete query.module
   delete query.asset
   delete query.plugin
@@ -82,51 +84,87 @@ useSideNav([
       <NuxtPage />
     </div>
 
-    <!-- Overlay detail panels -->
-    <Teleport to="body">
+    <!-- Overlay detail panels (side panel style, matching vite-devtools) -->
+    <div
+      v-if="currentPanelType" fixed inset-0
+      backdrop-blur-8 backdrop-brightness-95 z-100
+      @click.self="closePanel"
+    >
       <div
-        v-if="currentPanelType"
-        fixed inset-0 z-100 flex items-center justify-center
+        v-if="currentPanelType === 'entry'"
+        :key="(route.query.entry as string)"
+        fixed right-0 bottom-0 top-20 left-20 z-100
+        bg-glass border="l t base rounded-tl-xl"
       >
-        <div absolute inset-0 bg-black:50 backdrop-blur-2 @click="closePanel" />
-        <div
-          relative z-10 bg-base border="~ base" rounded-xl shadow-2xl
-          w="90%" max-w-4xl h="80%" max-h-90vh
-          flex="~ col" of-hidden
-        >
-          <div flex="~ items-center justify-between" p3 border="b base">
-            <span font-medium capitalize>{{ currentPanelType }} Details</span>
-            <DisplayCloseButton @click="closePanel" />
-          </div>
-          <div flex-1 of-auto p4>
-            <DataModuleDetailsLoader
-              v-if="currentPanelType === 'module'"
-              :session-id="sessionId"
-              :module-id="(route.query.module as string)"
-            />
-            <DataAssetDetailsLoader
-              v-if="currentPanelType === 'asset'"
-              :session-id="sessionId"
-              :asset-name="(route.query.asset as string)"
-            />
-            <DataPluginDetailsLoader
-              v-if="currentPanelType === 'plugin'"
-              :session-id="sessionId"
-              :plugin-name="(route.query.plugin as string)"
-            />
-            <DataChunkDetailsLoader
-              v-if="currentPanelType === 'chunk'"
-              :session-id="sessionId"
-              :chunk-id="(route.query.chunk as string)"
-            />
-            <DataPackageDetailsLoader
-              v-if="currentPanelType === 'package'"
-              :session-id="sessionId"
-              :package-name="(route.query.package as string)"
-            />
-          </div>
-        </div>
+        <DataEntryDetailsLoader
+          :session-id="sessionId"
+          :entry-name="(route.query.entry as string)"
+          @close="closePanel"
+        />
       </div>
-    </Teleport>
+      <div
+        v-if="currentPanelType === 'module'"
+        :key="(route.query.module as string)"
+        fixed right-0 bottom-0 top-20 left-20 z-100
+        bg-glass border="l t base rounded-tl-xl"
+      >
+        <DataModuleDetailsLoader
+          :session-id="sessionId"
+          :module-id="(route.query.module as string)"
+          @close="closePanel"
+        />
+      </div>
+      <div
+        v-if="currentPanelType === 'asset'"
+        :key="(route.query.asset as string)"
+        fixed right-0 bottom-0 top-30 z-100 of-hidden
+        bg-glass border="l t base rounded-tl-xl"
+        class="left-20 xl:left-100 2xl:left-150"
+      >
+        <DataAssetDetailsLoader
+          :session-id="sessionId"
+          :asset-name="(route.query.asset as string)"
+          @close="closePanel"
+        />
+      </div>
+      <div
+        v-if="currentPanelType === 'plugin'"
+        :key="(route.query.plugin as string)"
+        fixed right-0 bottom-0 top-20 left-20 z-100
+        bg-glass border="l t base rounded-tl-xl"
+      >
+        <DataPluginDetailsLoader
+          :session-id="sessionId"
+          :plugin-name="(route.query.plugin as string)"
+          @close="closePanel"
+        />
+      </div>
+      <div
+        v-if="currentPanelType === 'chunk'"
+        :key="(route.query.chunk as string)"
+        fixed right-0 bottom-0 top-20 z-100
+        bg-glass border="l t base rounded-tl-xl"
+        class="left-20 xl:left-100 2xl:left-150"
+      >
+        <DataChunkDetailsLoader
+          :session-id="sessionId"
+          :chunk-id="(route.query.chunk as string)"
+          @close="closePanel"
+        />
+      </div>
+      <div
+        v-if="currentPanelType === 'package'"
+        :key="(route.query.package as string)"
+        fixed right-0 bottom-0 top-20 z-100
+        bg-glass border="l t base rounded-tl-xl"
+        class="left-20 xl:left-100 2xl:left-150"
+      >
+        <DataPackageDetailsLoader
+          :session-id="sessionId"
+          :package-name="(route.query.package as string)"
+          @close="closePanel"
+        />
+      </div>
+    </div>
   </div>
 </template>

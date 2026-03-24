@@ -124,12 +124,17 @@ const dataTable = computed<DataTableItem[]>(() => {
         Build Entries
       </div>
       <div border="~ base rounded" p4>
-        <div v-for="entry in session.entrypoints" :key="entry.name" flex="~ gap-2 items-center" py1>
+        <NuxtLink
+          v-for="entry in session.entrypoints" :key="entry.name"
+          :to="{ query: { entry: entry.name } }"
+          flex="~ gap-2 items-center" py1
+          cursor-pointer hover="op80"
+        >
           <div i-ph-file-code text-sm op50 />
           <span font-mono text-sm>{{ entry.name }}</span>
           <DisplayBadge text="entry" :color="120" />
           <span text-xs op50>{{ formatBytes(entry.size) }}</span>
-        </div>
+        </NuxtLink>
       </div>
     </section>
 

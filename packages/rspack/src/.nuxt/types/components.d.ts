@@ -30,6 +30,7 @@ interface _GlobalComponents {
   CompareSessionMeta: typeof import("../../app/components/compare/SessionMeta.vue")['default']
   DataAssetDetailsLoader: typeof import("../../app/components/data/AssetDetailsLoader.vue")['default']
   DataChunkDetailsLoader: typeof import("../../app/components/data/ChunkDetailsLoader.vue")['default']
+  DataEntryDetailsLoader: typeof import("../../app/components/data/EntryDetailsLoader.vue")['default']
   DataModuleDetailsLoader: typeof import("../../app/components/data/ModuleDetailsLoader.vue")['default']
   DataPackageDetailsLoader: typeof import("../../app/components/data/PackageDetailsLoader.vue")['default']
   DataPathSelector: typeof import("../../app/components/data/PathSelector.vue")['default']
@@ -103,6 +104,7 @@ interface _GlobalComponents {
   LazyCompareSessionMeta: LazyComponent<typeof import("../../app/components/compare/SessionMeta.vue")['default']>
   LazyDataAssetDetailsLoader: LazyComponent<typeof import("../../app/components/data/AssetDetailsLoader.vue")['default']>
   LazyDataChunkDetailsLoader: LazyComponent<typeof import("../../app/components/data/ChunkDetailsLoader.vue")['default']>
+  LazyDataEntryDetailsLoader: LazyComponent<typeof import("../../app/components/data/EntryDetailsLoader.vue")['default']>
   LazyDataModuleDetailsLoader: LazyComponent<typeof import("../../app/components/data/ModuleDetailsLoader.vue")['default']>
   LazyDataPackageDetailsLoader: LazyComponent<typeof import("../../app/components/data/PackageDetailsLoader.vue")['default']>
   LazyDataPathSelector: LazyComponent<typeof import("../../app/components/data/PathSelector.vue")['default']>

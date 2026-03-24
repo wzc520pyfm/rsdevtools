@@ -30,6 +30,7 @@ export const CompareMetricCard: typeof import("../app/components/compare/MetricC
 export const CompareSessionMeta: typeof import("../app/components/compare/SessionMeta.vue")['default']
 export const DataAssetDetailsLoader: typeof import("../app/components/data/AssetDetailsLoader.vue")['default']
 export const DataChunkDetailsLoader: typeof import("../app/components/data/ChunkDetailsLoader.vue")['default']
+export const DataEntryDetailsLoader: typeof import("../app/components/data/EntryDetailsLoader.vue")['default']
 export const DataModuleDetailsLoader: typeof import("../app/components/data/ModuleDetailsLoader.vue")['default']
 export const DataPackageDetailsLoader: typeof import("../app/components/data/PackageDetailsLoader.vue")['default']
 export const DataPathSelector: typeof import("../app/components/data/PathSelector.vue")['default']
@@ -103,6 +104,7 @@ export const LazyCompareMetricCard: LazyComponent<typeof import("../app/componen
 export const LazyCompareSessionMeta: LazyComponent<typeof import("../app/components/compare/SessionMeta.vue")['default']>
 export const LazyDataAssetDetailsLoader: LazyComponent<typeof import("../app/components/data/AssetDetailsLoader.vue")['default']>
 export const LazyDataChunkDetailsLoader: LazyComponent<typeof import("../app/components/data/ChunkDetailsLoader.vue")['default']>
+export const LazyDataEntryDetailsLoader: LazyComponent<typeof import("../app/components/data/EntryDetailsLoader.vue")['default']>
 export const LazyDataModuleDetailsLoader: LazyComponent<typeof import("../app/components/data/ModuleDetailsLoader.vue")['default']>
 export const LazyDataPackageDetailsLoader: LazyComponent<typeof import("../app/components/data/PackageDetailsLoader.vue")['default']>
 export const LazyDataPathSelector: LazyComponent<typeof import("../app/components/data/PathSelector.vue")['default']>
