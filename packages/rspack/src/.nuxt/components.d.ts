@@ -40,6 +40,8 @@ export const DisplayCodeViewer: typeof import("../app/components/display/CodeVie
 export const DisplayFileIcon: typeof import("../app/components/display/FileIcon.vue")['default']
 export const DisplayFileSizeBadge: typeof import("../app/components/display/FileSizeBadge.vue")['default']
 export const DisplayGraphHoverView: typeof import("../app/components/display/GraphHoverView.vue")['default']
+export const DisplayHighlightedPath: typeof import("../app/components/display/HighlightedPath")['default']
+export const DisplayModuleGraph: typeof import("../app/components/display/ModuleGraph.vue")['default']
 export const DisplayModuleId: typeof import("../app/components/display/ModuleId.vue")['default']
 export const DisplayTreeNode: typeof import("../app/components/display/TreeNode.vue")['default']
 export const FlowmapExpandable: typeof import("../app/components/flowmap/Expandable.vue")['default']
@@ -116,6 +118,8 @@ export const LazyDisplayCodeViewer: LazyComponent<typeof import("../app/componen
 export const LazyDisplayFileIcon: LazyComponent<typeof import("../app/components/display/FileIcon.vue")['default']>
 export const LazyDisplayFileSizeBadge: LazyComponent<typeof import("../app/components/display/FileSizeBadge.vue")['default']>
 export const LazyDisplayGraphHoverView: LazyComponent<typeof import("../app/components/display/GraphHoverView.vue")['default']>
+export const LazyDisplayHighlightedPath: LazyComponent<typeof import("../app/components/display/HighlightedPath")['default']>
+export const LazyDisplayModuleGraph: LazyComponent<typeof import("../app/components/display/ModuleGraph.vue")['default']>
 export const LazyDisplayModuleId: LazyComponent<typeof import("../app/components/display/ModuleId.vue")['default']>
 export const LazyDisplayTreeNode: LazyComponent<typeof import("../app/components/display/TreeNode.vue")['default']>
 export const LazyFlowmapExpandable: LazyComponent<typeof import("../app/components/flowmap/Expandable.vue")['default']>

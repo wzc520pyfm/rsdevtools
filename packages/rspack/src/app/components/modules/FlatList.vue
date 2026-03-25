@@ -1,27 +1,36 @@
 <script setup lang="ts">
-import { formatBytes } from '@rspack-devtools/ui/utils/format'
+import type { BuildSession, ModuleData } from '../../../../shared/types'
 
-const props = defineProps<{
-  modules: any[]
-}>()
+withDefaults(defineProps<{
+  session?: BuildSession | null
+  modules: ModuleData[]
+  disableTooltip?: boolean
+}>(), {
+  disableTooltip: false,
+})
 
 const emit = defineEmits<{
-  select: [mod: any]
+  (e: 'select', module: ModuleData): void
 }>()
 </script>
 
 <template>
-  <div border="~ base" rounded-lg of-hidden>
-    <div
-      v-for="mod in modules"
-      :key="mod.id"
-      flex="~ gap-3" items-center px3 py2
-      border="b base last:b-0"
-      cursor-pointer hover:bg-active
-      @click="emit('select', mod)"
+  <div flex="~ col gap-2" p4>
+    <DataVirtualList
+      :items="modules"
+      key-prop="id"
     >
-      <DisplayModuleId :name="mod.name" short flex-1 min-w-0 />
-      <DisplayFileSizeBadge :size="mod.size" />
-    </div>
+      <template #default="{ item }">
+        <div flex pb2 @click="emit('select', item)">
+          <DisplayModuleId
+            :name="item.name"
+            :session="session"
+            hover="bg-active" block px2 p1 w-full
+            border="~ base rounded"
+            :disable-tooltip="disableTooltip"
+          />
+        </div>
+      </template>
+    </DataVirtualList>
   </div>
 </template>

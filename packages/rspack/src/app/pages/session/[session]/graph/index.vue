@@ -1,56 +1,121 @@
 <script setup lang="ts">
 import type { BuildSession, ModuleData } from '../../../../../shared/types'
+import type { ClientSettings } from '~/state/settings'
+import { computedWithControl, watchDebounced } from '@vueuse/core'
 import Fuse from 'fuse.js'
+import { computed, inject, ref } from 'vue'
+import { settings } from '~/state/settings'
+import { getFileTypeFromModuleId, ModuleTypeRules } from '~/utils/icon'
+
+function toArray<T>(val: T | T[]): T[] {
+  return Array.isArray(val) ? val : [val]
+}
+
+function clearUndefined<T extends Record<string, any>>(obj: T): T {
+  const result = {} as any
+  for (const key in obj) {
+    if (obj[key] !== undefined) result[key] = obj[key]
+  }
+  return result
+}
 
 const route = useRoute()
 const router = useRouter()
 const session = inject<Ref<BuildSession | null>>('session')!
 
-const viewType = useLocalStorage('rspack-modules-view', 'list')
-const search = ref('')
-const showNodeModules = ref(true)
+const searchValue = ref<{
+  search: string | false
+  selected: string[] | null
+  [key: string]: any
+}>({
+  search: (route.query.search || '') as string,
+  selected: (route.query.file_types ? toArray(route.query.file_types) : null) as string[] | null,
+  node_modules: (route.query.node_modules ? toArray(route.query.node_modules) : null) as string[] | null,
+})
 
-const fileTypeFilters = ref([
-  { id: 'js', label: 'JavaScript', icon: 'i-carbon-logo-javascript', checked: true },
-  { id: 'ts', label: 'TypeScript', icon: 'i-carbon-code', checked: true },
-  { id: 'css', label: 'CSS', icon: 'i-carbon-color-palette', checked: true },
-  { id: 'vue', label: 'Vue', icon: 'i-carbon-application', checked: true },
-  { id: 'html', label: 'HTML', icon: 'i-carbon-html', checked: true },
-  { id: 'json', label: 'JSON', icon: 'i-carbon-json', checked: true },
-  { id: 'other', label: 'Other', icon: 'i-carbon-document', checked: true },
-])
+const moduleViewTypes = [
+  {
+    label: 'List',
+    value: 'list',
+    icon: 'i-ph-list-bullets-duotone',
+  },
+  {
+    label: 'Detailed List',
+    value: 'detailed-list',
+    icon: 'i-ph-list-magnifying-glass-duotone',
+  },
+  {
+    label: 'Graph',
+    value: 'graph',
+    icon: 'i-ph-graph-duotone',
+  },
+  {
+    label: 'Folder',
+    value: 'folder',
+    icon: 'i-ph-folder-duotone',
+  },
+] as const
+
+watchDebounced(
+  searchValue.value,
+  (f) => {
+    const query: any = {
+      ...route.query,
+      search: f.search || undefined,
+      file_types: f.selected || undefined,
+      node_modules: f.node_modules || undefined,
+    }
+    router.replace({
+      query: clearUndefined(query),
+    })
+  },
+  { debounce: 500 },
+)
 
 const modules = computed(() => session.value?.modules ?? [])
 
-function getFileType(name: string): string {
-  if (/\.jsx?$/.test(name)) return 'js'
-  if (/\.tsx?$/.test(name)) return 'ts'
-  if (/\.css$|\.s[ac]ss$|\.less$/.test(name)) return 'css'
-  if (/\.vue$/.test(name)) return 'vue'
-  if (/\.html?$/.test(name)) return 'html'
-  if (/\.json$/.test(name)) return 'json'
-  return 'other'
-}
+const searchFilterTypes = computed(() => {
+  return ModuleTypeRules.filter((rule) => {
+    return modules.value.some(mod => rule.match.test(mod.name))
+  })
+})
 
-const filteredModules = computed(() => {
+const filtered = computed(() => {
   let result = modules.value
-
-  if (!showNodeModules.value) {
-    result = result.filter(m => !m.name.includes('node_modules'))
+  if (searchValue.value.selected) {
+    result = result.filter((mod) => {
+      const type = getFileTypeFromModuleId(mod.name)
+      return searchValue.value.selected!.includes(type.name)
+    })
   }
-
-  const activeTypes = fileTypeFilters.value.filter(f => f.checked).map(f => f.id)
-  if (activeTypes.length < fileTypeFilters.value.length) {
-    result = result.filter(m => activeTypes.includes(getFileType(m.name)))
-  }
-
-  if (search.value) {
-    const fuse = new Fuse(result, { keys: ['name'], threshold: 0.3 })
-    result = fuse.search(search.value).map(r => r.item)
-  }
-
   return result
 })
+
+const fuse = computedWithControl(
+  () => filtered.value,
+  () => new Fuse(filtered.value, {
+    includeScore: true,
+    keys: ['name'],
+    ignoreLocation: true,
+    threshold: 0.4,
+  }),
+)
+
+const searched = computed<ModuleData[]>(() => {
+  if (!searchValue.value.search) {
+    return filtered.value
+  }
+  return fuse.value
+    .search(searchValue.value.search)
+    .map(r => r.item)
+})
+
+function toggleDisplay(type: ClientSettings['moduleGraphViewType']) {
+  if (route.query.module) {
+    router.replace({ query: { ...route.query, module: undefined } })
+  }
+  settings.value.moduleGraphViewType = type
+}
 
 function openModule(mod: ModuleData) {
   router.push({ query: { ...route.query, module: mod.id } })
@@ -58,68 +123,65 @@ function openModule(mod: ModuleData) {
 </script>
 
 <template>
-  <div flex="~ col gap-4">
-    <DataSearchPanel v-model:search="search">
-      <template #search-end>
-        <button
-          btn-action text-sm
-          :class="{ 'btn-action-active': showNodeModules }"
-          @click="showNodeModules = !showNodeModules"
-        >
-          Node Modules
-        </button>
-        <div flex="~ gap-1">
+  <div relative max-h-screen of-hidden>
+    <div absolute left-4 top-4 z-panel-nav>
+      <DataSearchPanel v-model="searchValue" :rules="searchFilterTypes">
+        <div flex="~ gap-2 items-center" p2 border="t base">
+          <span op50 pl2 text-sm>View as</span>
           <button
-            v-for="ft in fileTypeFilters"
-            :key="ft.id"
-            btn-action text-xs px1
-            :class="{ 'btn-action-active': ft.checked }"
-            :title="ft.label"
-            @click="ft.checked = !ft.checked"
+            v-for="viewType of moduleViewTypes"
+            :key="viewType.value"
+            btn-action
+            :class="settings.moduleGraphViewType === viewType.value ? 'bg-active' : 'grayscale op50'"
+            @click="toggleDisplay(viewType.value)"
           >
-            <div :class="ft.icon" />
+            <div :class="viewType.icon" />
+            {{ viewType.label }}
           </button>
         </div>
-      </template>
-      <div flex="~ gap-1">
-        <button
-          v-for="vt in ['list', 'detailed', 'graph', 'folder']"
-          :key="vt"
-          btn-action text-sm
-          :class="{ 'btn-action-active': viewType === vt }"
-          @click="viewType = vt"
+      </DataSearchPanel>
+    </div>
+
+    <template v-if="settings.moduleGraphViewType === 'list'">
+      <div of-auto h-screen pt-45>
+        <ModulesFlatList
+          :session="session"
+          :modules="searched"
+          @select="openModule"
+        />
+        <div
+          absolute bottom-4 py-1 px-2 bg-glass left="1/2" translate-x="-1/2" border="~ base rounded-full" text="center xs"
         >
-          {{ vt === 'list' ? 'List' : vt === 'detailed' ? 'Detailed List' : vt === 'graph' ? 'Graph' : 'Folder' }}
-        </button>
+          <span op50>{{ searched.length }} of {{ modules.length }}</span>
+        </div>
       </div>
-    </DataSearchPanel>
-
-    <!-- Module List View -->
-    <div v-if="viewType === 'list'">
-      <ModulesFlatList :modules="filteredModules" @select="openModule" />
-    </div>
-
-    <!-- Detailed List View -->
-    <div v-else-if="viewType === 'detailed'">
-      <ModulesDetailedList :modules="filteredModules" @select="openModule" />
-    </div>
-
-    <!-- Graph View -->
-    <div v-else-if="viewType === 'graph'">
-      <ModulesGraph :modules="filteredModules" @select="openModule" />
-    </div>
-
-    <!-- Folder View -->
-    <div v-else-if="viewType === 'folder'">
-      <ModulesFolder :modules="filteredModules" @select="openModule" />
-    </div>
-
-    <div v-if="!filteredModules.length" py8 text-center op50>
-      No modules match the current filters
-    </div>
-
-    <div text-xs op30 text-right>
-      {{ filteredModules.length }} of {{ modules.length }} modules
-    </div>
+    </template>
+    <template v-else-if="settings.moduleGraphViewType === 'detailed-list'">
+      <div of-auto h-screen pt-45>
+        <ModulesDetailedList
+          :session="session"
+          :modules="searched"
+          @select="openModule"
+        />
+        <div
+          absolute bottom-4 py-1 px-2 bg-glass left="1/2" translate-x="-1/2" border="~ base rounded-full" text="center xs"
+        >
+          <span op50>{{ searched.length }} of {{ modules.length }}</span>
+        </div>
+      </div>
+    </template>
+    <template v-else-if="settings.moduleGraphViewType === 'graph'">
+      <ModulesGraph
+        :modules="searched"
+        @select="openModule"
+      />
+    </template>
+    <template v-else>
+      <ModulesFolder
+        :session="session"
+        :modules="searched"
+        @select="openModule"
+      />
+    </template>
   </div>
 </template>

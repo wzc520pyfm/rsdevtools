@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { getFileIcon } from '@rspack-devtools/ui/utils/format'
+import { computed } from 'vue'
+import { getFileTypeFromModuleId } from '~/utils/icon'
 
-defineProps<{
-  name: string
+const props = defineProps<{
+  filename: string
 }>()
+
+const info = computed(() => getFileTypeFromModuleId(props.filename))
 </script>
 
 <template>
-  <div :class="getFileIcon(name)" />
+  <div
+    flex-none icon-catppuccin
+    :title="info.description || info.name"
+    :class="[info.icon]"
+  />
 </template>

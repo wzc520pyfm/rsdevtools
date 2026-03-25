@@ -167,3 +167,14 @@ export interface FileDetail {
 export interface FileExplorerInfo {
   rootDir: string
 }
+
+export interface ModuleDest {
+  full: string
+  path: string
+}
+
+export interface ModuleTreeNode {
+  name?: string
+  children: Record<string, ModuleTreeNode>
+  items: ModuleDest[]
+}

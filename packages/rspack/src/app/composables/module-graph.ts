@@ -1,6 +1,6 @@
 import type { HierarchyLink, HierarchyNode } from 'd3-hierarchy'
 import type { ComputedRef, InjectionKey, MaybeRef, Ref, ShallowReactive, ShallowRef } from 'vue'
-import { useMagicKeys, useEventListener } from '@vueuse/core'
+import { onKeyPressed, useMagicKeys, useEventListener } from '@vueuse/core'
 import { hierarchy, tree } from 'd3-hierarchy'
 import { linkHorizontal, linkVertical } from 'd3-shape'
 import { computed, inject, nextTick, provide, ref, shallowReactive, shallowRef, unref } from 'vue'
@@ -182,6 +182,133 @@ export function createModuleGraph<M extends { id: string }, I>(options: ModuleGr
 export function useModuleGraph() {
   const state = inject(RspackModuleGraphStateSymbol)!
   return state
+}
+
+// @unocss-include
+export function getModuleGraphLinkColor<M, I>(_link: ModuleGraphLink<M, I>) {
+  return 'stroke-#8885'
+}
+
+export function useToggleGraphNodeExpanded<M extends { id: string, dependencies: string[] }>(options: {
+  modules: MaybeRef<M[]>
+}) {
+  const { nodesRefMap, container, calculateGraph, collapsedNodes } = inject(RspackModuleGraphStateSymbol)!
+  const isGraphNodeToggling = ref(false)
+
+  function restoreScrollPosition(id: string, beforePosition: { x: number, y: number }) {
+    nextTick(() => {
+      nextTick(() => {
+        const newNode = nodesRefMap.get(id)
+
+        if (newNode && beforePosition && container.value) {
+          const containerRect = container.value.getBoundingClientRect()
+          const newRect = newNode.getBoundingClientRect()
+
+          const viewportDiffX = newRect.left - containerRect.left - beforePosition.x
+          const viewportDiffY = newRect.top - containerRect.top - beforePosition.y
+
+          container.value.scrollLeft += viewportDiffX
+          container.value.scrollTop += viewportDiffY
+        }
+      })
+    })
+  }
+
+  function toggleNode(id: string) {
+    if (isGraphNodeToggling.value)
+      return
+    isGraphNodeToggling.value = true
+
+    const node = nodesRefMap.get(id)
+    let prevNodeOffset: null | { x: number, y: number } = null
+
+    if (node && container.value) {
+      const containerRect = container.value.getBoundingClientRect()
+      const rect = node.getBoundingClientRect()
+      prevNodeOffset = {
+        x: rect.left - containerRect.left,
+        y: rect.top - containerRect.top,
+      }
+    }
+
+    if (collapsedNodes.has(id)) {
+      collapsedNodes.delete(id)
+    }
+    else {
+      collapsedNodes.add(id)
+    }
+
+    calculateGraph()
+
+    if (prevNodeOffset) {
+      restoreScrollPosition(id, prevNodeOffset)
+    }
+
+    isGraphNodeToggling.value = false
+  }
+
+  function expandAll() {
+    if (isGraphNodeToggling.value)
+      return
+
+    isGraphNodeToggling.value = true
+
+    collapsedNodes.clear()
+    calculateGraph()
+
+    setTimeout(() => {
+      isGraphNodeToggling.value = false
+    }, 300)
+  }
+
+  function collapseAll() {
+    if (isGraphNodeToggling.value)
+      return
+
+    isGraphNodeToggling.value = true
+
+    unref(options.modules).forEach((module) => {
+      if (module.dependencies.length > 0) {
+        collapsedNodes.add(module.id)
+      }
+    })
+    calculateGraph()
+
+    setTimeout(() => {
+      isGraphNodeToggling.value = false
+    }, 300)
+  }
+
+  return {
+    isGraphNodeToggling,
+    toggleNode,
+    expandAll,
+    collapseAll,
+  }
+}
+
+export function useGraphZoom() {
+  const state = inject(RspackModuleGraphStateSymbol)!
+
+  const { scale, zoomIn, zoomOut, ZOOM_MIN, ZOOM_MAX } = state
+
+  onKeyPressed(['-', '_'], (e) => {
+    if (e.ctrlKey)
+      zoomOut()
+  })
+
+  onKeyPressed(['=', '+'], (e) => {
+    if (e.ctrlKey)
+      zoomIn()
+  })
+
+  return {
+    ZOOM_MIN,
+    ZOOM_MAX,
+    scale,
+    zoomIn,
+    zoomOut,
+  }
 }
 
 export function useGraphDraggingScroll() {

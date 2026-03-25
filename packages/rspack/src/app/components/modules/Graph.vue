@@ -1,93 +1,188 @@
 <script setup lang="ts">
-import * as d3 from 'd3'
+import type { ModuleData } from '../../../../shared/types'
+import type { ModuleGraphLink, ModuleGraphNode } from '~/composables/module-graph'
+import { computed, nextTick, unref } from 'vue'
+import { createModuleGraph } from '~/composables/module-graph'
 
 const props = defineProps<{
-  modules: any[]
+  modules: ModuleData[]
 }>()
 
 const emit = defineEmits<{
-  select: [mod: any]
+  (e: 'select', module: ModuleData): void
 }>()
 
-const container = ref<HTMLElement>()
+const modules = computed(() => props.modules)
 
-onMounted(() => {
-  if (!container.value || !props.modules.length) return
-  renderGraph()
+const modulesById = computed(() => {
+  const map = new Map<string, ModuleData>()
+  for (const mod of props.modules) {
+    map.set(mod.id, mod)
+  }
+  return map
 })
 
-watch(() => [props.modules, container.value], () => {
-  if (!container.value || !props.modules.length) return
-  renderGraph()
-}, { deep: true })
+createModuleGraph<ModuleData, undefined>({
+  modules,
+  spacing: {
+    width: 400,
+    height: 55,
+    linkOffset: 20,
+    margin: 800,
+    gap: 150,
+  },
+  generateGraph: (options) => {
+    const { isFirstCalculateGraph, scale, spacing, tree, hierarchy, collapsedNodes, container, modulesMap, nodes, links, nodesMap, linksMap, width, height, childToParentMap, focusOn } = options
+    const rootModules = computed(() => {
+      return modules.value.filter(x => !x.dependents || x.dependents.length === 0)
+    })
 
-function renderGraph() {
-  if (!container.value) return
-  const el = container.value
-  el.innerHTML = ''
+    return (focusOnFirstRootNode = true) => {
+      width.value = window.innerWidth
+      height.value = window.innerHeight
 
-  const width = el.clientWidth
-  const height = 500
+      const seen = new Set<ModuleData>()
+      const root = hierarchy<ModuleGraphNode<ModuleData, undefined>>(
+        { module: { id: '~root' } } as any,
+        (parent) => {
+          if (parent.module.id === '~root') {
+            rootModules.value.forEach((x) => {
+              seen.add(x)
+              if (isFirstCalculateGraph.value) {
+                childToParentMap.set(x.id, '~root')
+              }
+            })
+            return rootModules.value.map(x => ({
+              module: x,
+              expanded: !collapsedNodes.has(x.id),
+              hasChildren: false,
+            }))
+          }
 
-  const svg = d3.select(el).append('svg')
-    .attr('width', width)
-    .attr('height', height)
-    .attr('viewBox', `0 0 ${width} ${height}`)
+          if (collapsedNodes.has(parent.module.id)) {
+            return []
+          }
 
-  const maxNodes = Math.min(props.modules.length, 200)
-  const nodes = props.modules.slice(0, maxNodes).map((m: any) => ({
-    id: m.id,
-    name: m.name,
-    size: m.size,
-  }))
+          const deps = (parent.module.dependencies ?? [])
+            .map((depId): ModuleGraphNode<ModuleData, undefined> | undefined => {
+              const module = modulesMap.value.get(depId)
+              if (!module)
+                return undefined
+              if (seen.has(module))
+                return undefined
 
-  const nodeIds = new Set(nodes.map((n: any) => n.id))
-  const links: any[] = []
-  props.modules.slice(0, maxNodes).forEach((m: any) => {
-    ;(m.dependencies ?? []).forEach((dep: string) => {
-      if (nodeIds.has(dep)) {
-        links.push({ source: m.id, target: dep })
+              if (childToParentMap.has(module.id) && childToParentMap.get(module.id) !== parent.module.id)
+                return undefined
+
+              seen.add(module)
+
+              if (isFirstCalculateGraph.value) {
+                childToParentMap.set(module.id, parent.module.id)
+              }
+
+              return {
+                module,
+                expanded: !collapsedNodes.has(module.id),
+                hasChildren: false,
+              }
+            })
+            .filter(x => x !== undefined)
+
+          return deps
+        },
+      )
+
+      if (isFirstCalculateGraph.value) {
+        isFirstCalculateGraph.value = false
       }
-    })
-  })
 
-  const simulation = d3.forceSimulation(nodes as any)
-    .force('link', d3.forceLink(links).id((d: any) => d.id).distance(60))
-    .force('charge', d3.forceManyBody().strength(-100))
-    .force('center', d3.forceCenter(width / 2, height / 2))
+      const layout = tree<ModuleGraphNode<ModuleData, undefined>>()
+        .nodeSize([unref(spacing.height), unref(spacing.width) + unref(spacing.gap)])
+      layout(root)
 
-  const link = svg.append('g')
-    .selectAll('line')
-    .data(links)
-    .join('line')
-    .attr('stroke', '#8884')
-    .attr('stroke-width', 1)
+      const _nodes = root.descendants()
 
-  const node = svg.append('g')
-    .selectAll('circle')
-    .data(nodes)
-    .join('circle')
-    .attr('r', 5)
-    .attr('fill', '#60a5fa')
-    .attr('cursor', 'pointer')
-    .on('click', (_: any, d: any) => {
-      const mod = props.modules.find((m: any) => m.id === d.id)
-      if (mod) emit('select', mod)
-    })
+      for (const node of _nodes) {
+        ;[node.x, node.y] = [node.y! - unref(spacing.width), node.x!]
 
-  simulation.on('tick', () => {
-    link
-      .attr('x1', (d: any) => d.source.x)
-      .attr('y1', (d: any) => d.source.y)
-      .attr('x2', (d: any) => d.target.x)
-      .attr('y2', (d: any) => d.target.y)
-    node
-      .attr('cx', (d: any) => d.x)
-      .attr('cy', (d: any) => d.y)
-  })
+        if (node.data.module.dependencies) {
+          node.data.hasChildren = node.data.module.dependencies
+            .filter(depId => childToParentMap.get(depId) === node.data.module.id)
+            .length > 0
+        }
+      }
+
+      const minX = Math.min(..._nodes.map(n => n.x!))
+      const minY = Math.min(..._nodes.map(n => n.y!))
+      if (minX < unref(spacing.margin)) {
+        for (const node of _nodes) {
+          node.x! += Math.abs(minX) + unref(spacing.margin)
+        }
+      }
+      if (minY < unref(spacing.margin)) {
+        for (const node of _nodes) {
+          node.y! += Math.abs(minY) + unref(spacing.margin)
+        }
+      }
+
+      nodes.value = _nodes
+      nodesMap.clear()
+      for (const node of _nodes) {
+        nodesMap.set(node.data.module.id, node)
+      }
+      const _links = root.links()
+        .filter(x => x.source.data.module.id !== '~root')
+        .map((x): ModuleGraphLink<ModuleData, undefined> => {
+          return {
+            ...x,
+            id: `${x.source.data.module.id}|${x.target.data.module.id}`,
+          }
+        })
+
+      linksMap.clear()
+      for (const link of _links) {
+        linksMap.set(link.id, link)
+      }
+      links.value = _links
+
+      nextTick(() => {
+        width.value = (container.value!.scrollWidth / scale.value + unref(spacing.margin))
+        height.value = (container.value!.scrollHeight / scale.value + unref(spacing.margin))
+        const moduleId = rootModules.value?.[0]?.id
+        if (focusOnFirstRootNode && moduleId) {
+          nextTick(() => {
+            focusOn(moduleId, false)
+          })
+        }
+      })
+    }
+  },
+})
+
+function selectModule(id: string) {
+  const mod = modulesById.value.get(id)
+  if (mod) {
+    emit('select', mod)
+  }
 }
 </script>
 
 <template>
-  <div ref="container" w-full min-h-500px border="~ base" rounded-lg />
+  <DisplayModuleGraph
+    :modules="modules"
+  >
+    <template #default="{ node, nodesRefMap }">
+      <div
+        :ref="(el: any) => nodesRefMap.set(node.data.module.id, el)"
+        flex="1" cursor-pointer
+        @click="selectModule(node.data.module.id)"
+      >
+        <DisplayModuleId
+          :name="node.data.module.name"
+          :short="true"
+          flex="1"
+        />
+      </div>
+    </template>
+  </DisplayModuleGraph>
 </template>

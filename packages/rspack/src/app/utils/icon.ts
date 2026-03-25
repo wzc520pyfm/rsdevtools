@@ -1,23 +1,112 @@
-export function getModuleTypeIcon(type: string): string {
-  switch (type) {
-    case 'javascript/auto':
-    case 'javascript/dynamic':
-    case 'javascript/esm':
-      return 'i-carbon-logo-javascript text-yellow-500'
-    case 'css':
-    case 'css/module':
-      return 'i-carbon-color-palette text-blue-400'
-    case 'json':
-      return 'i-carbon-json text-yellow-600'
-    case 'asset':
-    case 'asset/resource':
-    case 'asset/inline':
-    case 'asset/source':
-      return 'i-carbon-image text-green-500'
-    default:
-      return 'i-carbon-document text-gray-500'
-  }
+import { makeCachedFunction } from './cache'
+
+export interface FilterMatchRule {
+  match: RegExp
+  name: string
+  description: string
+  icon: string
 }
+
+// @unocss-include
+export const ModuleTypeRules: FilterMatchRule[] = [
+  {
+    match: /[\\/]node_modules[\\/]/i,
+    name: 'node_modules',
+    description: 'Node Modules',
+    icon: 'i-catppuccin-npm',
+  },
+  {
+    match: /virtual:|^\0/,
+    name: 'virtual',
+    description: 'Virtual',
+    icon: 'i-catppuccin-symlink',
+  },
+  {
+    match: /\.vue$/i,
+    name: 'vue',
+    description: 'Vue',
+    icon: 'i-catppuccin-vue',
+  },
+  {
+    match: /\.[cm]?[tj]sx$/i,
+    name: 'jsx',
+    description: 'JavaScript React',
+    icon: 'i-catppuccin-javascript-react',
+  },
+  {
+    match: /\.[cm]?ts$/i,
+    name: 'ts',
+    description: 'TypeScript',
+    icon: 'i-catppuccin-typescript',
+  },
+  {
+    match: /\.[cm]?js$/i,
+    name: 'js',
+    description: 'JavaScript',
+    icon: 'i-catppuccin-javascript',
+  },
+  {
+    match: /\.svelte$/i,
+    name: 'svelte',
+    description: 'Svelte',
+    icon: 'i-catppuccin-svelte',
+  },
+  {
+    match: /\.html?$/i,
+    name: 'html',
+    description: 'HTML',
+    icon: 'i-catppuccin-html',
+  },
+  {
+    match: /\.(css|scss|less|postcss)$/i,
+    name: 'css',
+    description: 'CSS',
+    icon: 'i-catppuccin-css',
+  },
+  {
+    match: /\.json[c5]?$/i,
+    name: 'json',
+    description: 'JSON',
+    icon: 'i-catppuccin-json',
+  },
+  {
+    match: /\.(yaml|yml)$/i,
+    name: 'yaml',
+    description: 'YAML',
+    icon: 'i-catppuccin-yaml',
+  },
+  {
+    match: /\.svg$/i,
+    name: 'svg',
+    description: 'SVG',
+    icon: 'i-catppuccin-svg',
+  },
+]
+
+export const DefaultFileTypeRule: FilterMatchRule = {
+  name: 'file',
+  match: /.*/,
+  description: 'File',
+  icon: 'i-catppuccin-file',
+}
+
+export function getFileTypeFromName(name: string) {
+  return ModuleTypeRules.find(rule => rule.name === name) ?? DefaultFileTypeRule
+}
+
+export const getFileTypeFromModuleId = makeCachedFunction((moduleId: string): FilterMatchRule => {
+  moduleId = moduleId
+    .replace(/(\?|&)v=[^&]*/, '$1')
+    .replace(/\?$/, '')
+
+  for (const rule of ModuleTypeRules) {
+    if (rule.match.test(moduleId)) {
+      return rule
+    }
+  }
+
+  return DefaultFileTypeRule
+})
 
 export function getChunkTypeIcon(entry: boolean, initial: boolean): string {
   if (entry) return 'i-ph-house-duotone text-green-500'

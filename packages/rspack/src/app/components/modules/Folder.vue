@@ -1,78 +1,105 @@
 <script setup lang="ts">
+import type { BuildSession, ModuleData, ModuleDest } from '../../../../shared/types'
+import { computed } from 'vue'
+import { toTree } from '../../utils/format'
+
 const props = defineProps<{
-  modules: any[]
+  session?: BuildSession | null
+  modules: ModuleData[]
 }>()
 
 const emit = defineEmits<{
-  select: [mod: any]
+  (e: 'select', module: ModuleData): void
 }>()
 
-interface TreeItem {
-  name: string
-  path: string
-  isDir: boolean
-  children: TreeItem[]
-  module?: any
-  size: number
-}
-
-const tree = computed(() => {
-  const root: TreeItem = { name: '/', path: '/', isDir: true, children: [], size: 0 }
+const moduleMap = computed(() => {
+  const map = new Map<string, ModuleData>()
   for (const mod of props.modules) {
-    const parts = mod.name.split('/').filter(Boolean)
-    let current = root
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i]
-      const isLast = i === parts.length - 1
-      let child = current.children.find(c => c.name === part)
-      if (!child) {
-        child = {
-          name: part,
-          path: parts.slice(0, i + 1).join('/'),
-          isDir: !isLast,
-          children: [],
-          module: isLast ? mod : undefined,
-          size: isLast ? mod.size : 0,
-        }
-        current.children.push(child)
-      }
-      if (!isLast) current = child
-    }
+    map.set(mod.name, mod)
   }
-  return root.children
+  return map
 })
 
-const expanded = ref(new Set<string>())
+const moduleTree = computed(() => {
+  if (!props.modules.length) {
+    return {
+      workspace: { children: {}, items: [] },
+      nodeModules: { children: {}, items: [] },
+      virtual: { children: {}, items: [] },
+    }
+  }
 
-function toggle(path: string) {
-  const next = new Set(expanded.value)
-  if (next.has(path)) next.delete(path)
-  else next.add(path)
-  expanded.value = next
+  const cwd = props.session?.cwd || ''
+  const inWorkspace: ModuleDest[] = []
+  const inNodeModules: ModuleDest[] = []
+  const inVirtual: ModuleDest[] = []
+
+  props.modules.forEach((mod) => {
+    const name = mod.name
+    if (name.startsWith('virtual:') || name.startsWith('\0')) {
+      inVirtual.push({ full: name, path: name })
+    }
+    else if (name.includes('node_modules')) {
+      inNodeModules.push({ full: name, path: name })
+    }
+    else if (cwd && name.startsWith(cwd)) {
+      inWorkspace.push({ full: name, path: name.slice(cwd.length + 1) })
+    }
+    else {
+      inWorkspace.push({ full: name, path: name })
+    }
+  })
+
+  return {
+    workspace: toTree(inWorkspace, 'Project Root'),
+    nodeModules: toTree(inNodeModules, 'Node Modules'),
+    virtual: toTree(inVirtual, 'Virtual Modules'),
+  }
+})
+
+function onSelect(dest: ModuleDest) {
+  const mod = moduleMap.value.get(dest.full)
+  if (mod) {
+    emit('select', mod)
+  }
 }
 </script>
 
 <template>
-  <div border="~ base" rounded-lg of-auto max-h-600px>
-    <template v-for="item in tree" :key="item.path">
+  <div of-auto max-h-screen pt-45 relative>
+    <div flex="~ col gap-2" p4>
       <DisplayTreeNode
-        :label="item.name"
-        :icon="item.isDir ? 'i-ph-folder-duotone text-amber' : undefined"
-        :has-children="item.isDir && item.children.length > 0"
-        :expanded="expanded.has(item.path)"
-        @toggle="toggle(item.path)"
-        @click="item.module ? emit('select', item.module) : toggle(item.path)"
+        v-if="Object.keys(moduleTree.workspace.children).length || moduleTree.workspace.items.length"
+        :node="moduleTree.workspace"
+        p="l3"
+        icon="i-catppuccin:folder-dist icon-catppuccin"
+        icon-open="i-catppuccin:folder-dist-open icon-catppuccin"
+        @select="onSelect"
       />
-      <template v-if="expanded.has(item.path)">
-        <div v-for="child in item.children" :key="child.path" pl4>
-          <DisplayTreeNode
-            :label="child.name"
-            :icon="child.isDir ? 'i-ph-folder-duotone text-amber' : undefined"
-            :depth="1"
-            @click="child.module ? emit('select', child.module) : undefined"
-          />
-        </div>
+
+      <template v-if="Object.keys(moduleTree.nodeModules.children).length || moduleTree.nodeModules.items.length">
+        <div w-full h-1px border="t base" />
+        <DisplayTreeNode
+          :node="moduleTree.nodeModules"
+          p="l3"
+          icon="i-catppuccin:folder-node icon-catppuccin"
+          icon-open="i-catppuccin:folder-node-open icon-catppuccin"
+          :open="false"
+          @select="onSelect"
+        />
       </template>
-    </template>
+
+      <template v-if="Object.keys(moduleTree.virtual.children).length || moduleTree.virtual.items.length">
+        <div w-full h-1px border="t base" />
+        <DisplayTreeNode
+          :node="moduleTree.virtual"
+          p="l3"
+          icon="i-catppuccin:folder-components icon-catppuccin"
+          icon-open="i-catppuccin:folder-components-open icon-catppuccin"
+          :open="false"
+          @select="onSelect"
+        />
+      </template>
+    </div>
   </div>
 </template>

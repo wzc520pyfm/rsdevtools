@@ -20,7 +20,7 @@ const emit = defineEmits<{
       cursor-pointer hover:bg-active
       @click="emit('select', asset)"
     >
-      <DisplayFileIcon :name="asset.name" />
+      <DisplayFileIcon :filename="asset.name" />
       <span font-mono text-sm flex-1 truncate>{{ asset.name }}</span>
       <DisplayFileSizeBadge :size="asset.size" />
     </div>
