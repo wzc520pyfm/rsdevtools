@@ -1,26 +1,32 @@
 <script setup lang="ts">
-const props = defineProps<{
-  plugins: any[]
+import type { PluginData } from '../../../../shared/types'
+import DataVirtualList from '@rspack-devtools/ui/components/DataVirtualList'
+
+defineProps<{
+  plugins: PluginData[]
 }>()
 
-const emit = defineEmits<{
-  select: [name: string]
-}>()
+const route = useRoute()
 </script>
 
 <template>
-  <div border="~ base" rounded-lg of-hidden>
-    <div
-      v-for="plugin in plugins"
-      :key="plugin.name"
-      flex="~ gap-3" items-center px3 py2
-      border="b base last:b-0"
-      cursor-pointer hover:bg-active
-      @click="emit('select', plugin.name)"
+  <div flex="~ col gap-2" p4>
+    <DataVirtualList
+      :items="plugins"
+      key-prop="index"
     >
-      <div i-ph-plug text-sm op50 />
-      <span flex-1 text-sm font-mono>{{ plugin.name }}</span>
-      <span text-xs op30 font-mono>#{{ plugin.index }}</span>
-    </div>
+      <template #default="{ item }">
+        <div flex pb2>
+          <NuxtLink :to="{ path: route.path, query: { plugin: item.name } }" font-mono border="~ rounded base" w-full px2 py1 text-sm hover="bg-active" flex="~ gap-4 items-center">
+            <div w-8 text-right text-xs op50>
+              #{{ item.index }}
+            </div>
+            <span overflow-hidden text-ellipsis break-all line-clamp-2>
+              <DisplayPluginName :name="item.name" />
+            </span>
+          </NuxtLink>
+        </div>
+      </template>
+    </DataVirtualList>
   </div>
 </template>

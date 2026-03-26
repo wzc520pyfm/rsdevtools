@@ -39,8 +39,8 @@ export { getMonaco, applyMonacoTheme, getMonacoWordWrap, createReadOnlyMonacoEdi
 export { connectionState, useRpc, connect, ServerFunctions, ClientFunctions } from '../app/composables/rpc';
 export { useZoomElement } from '../app/composables/zoom-element';
 export { FixedTupleMap, FixedTupleMap, V, V, TupleMap, TupleMap, V, makeCachedFunction } from '../app/utils/cache';
-export { getHashColorFromString, getHsla } from '../app/utils/color';
+export { getPluginColor, getHashColorFromString, getHsla } from '../app/utils/color';
 export { getFileName, getDirectory, getExtension, isNodeModules, normalizeModulePath, getPackageName } from '../app/utils/filepath';
 export { toTree, formatBytes, formatDuration, shortenPath, getFileIcon } from '../app/utils/format';
-export { ModuleTypeRules, DefaultFileTypeRule, getFileTypeFromName, getFileTypeFromModuleId, getChunkTypeIcon, FilterMatchRule } from '../app/utils/icon';
+export { ModuleTypeRules, DefaultFileTypeRule, getFileTypeFromName, getFileTypeFromModuleId, PluginTypeRules, DefaultPluginType, getPluginTypeFromName, getChunkTypeIcon, FilterMatchRule } from '../app/utils/icon';
 export { isJavaScript, isCSS, isImage, isFont, isSourceMap } from '../app/utils/is';

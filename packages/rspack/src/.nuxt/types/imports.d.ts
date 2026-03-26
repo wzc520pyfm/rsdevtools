@@ -2,8 +2,10 @@
 export {}
 declare global {
   const DefaultFileTypeRule: typeof import('../../app/utils/icon').DefaultFileTypeRule
+  const DefaultPluginType: typeof import('../../app/utils/icon').DefaultPluginType
   const FixedTupleMap: typeof import('../../app/utils/cache').FixedTupleMap
   const ModuleTypeRules: typeof import('../../app/utils/icon').ModuleTypeRules
+  const PluginTypeRules: typeof import('../../app/utils/icon').PluginTypeRules
   const TupleMap: typeof import('../../app/utils/cache').TupleMap
   const V: typeof import('../../app/utils/cache').V
   const abortNavigation: typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/router').abortNavigation
@@ -77,6 +79,8 @@ declare global {
   const getMonaco: typeof import('../../app/composables/monaco').getMonaco
   const getMonacoWordWrap: typeof import('../../app/composables/monaco').getMonacoWordWrap
   const getPackageName: typeof import('../../app/utils/filepath').getPackageName
+  const getPluginColor: typeof import('../../app/utils/color').getPluginColor
+  const getPluginTypeFromName: typeof import('../../app/utils/icon').getPluginTypeFromName
   const getRouteRules: typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/manifest').getRouteRules
   const guessMonacoLanguage: typeof import('../../app/composables/monaco').guessMonacoLanguage
   const h: typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue').h
@@ -481,8 +485,10 @@ import { UnwrapRef } from 'vue'
 declare module 'vue' {
   interface ComponentCustomProperties {
     readonly DefaultFileTypeRule: UnwrapRef<typeof import('../../app/utils/icon')['DefaultFileTypeRule']>
+    readonly DefaultPluginType: UnwrapRef<typeof import('../../app/utils/icon')['DefaultPluginType']>
     readonly FixedTupleMap: UnwrapRef<typeof import('../../app/utils/cache')['FixedTupleMap']>
     readonly ModuleTypeRules: UnwrapRef<typeof import('../../app/utils/icon')['ModuleTypeRules']>
+    readonly PluginTypeRules: UnwrapRef<typeof import('../../app/utils/icon')['PluginTypeRules']>
     readonly TupleMap: UnwrapRef<typeof import('../../app/utils/cache')['TupleMap']>
     readonly V: UnwrapRef<typeof import('../../app/utils/cache')['V']>
     readonly abortNavigation: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/router')['abortNavigation']>
@@ -556,6 +562,8 @@ declare module 'vue' {
     readonly getMonaco: UnwrapRef<typeof import('../../app/composables/monaco')['getMonaco']>
     readonly getMonacoWordWrap: UnwrapRef<typeof import('../../app/composables/monaco')['getMonacoWordWrap']>
     readonly getPackageName: UnwrapRef<typeof import('../../app/utils/filepath')['getPackageName']>
+    readonly getPluginColor: UnwrapRef<typeof import('../../app/utils/color')['getPluginColor']>
+    readonly getPluginTypeFromName: UnwrapRef<typeof import('../../app/utils/icon')['getPluginTypeFromName']>
     readonly getRouteRules: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/manifest')['getRouteRules']>
     readonly guessMonacoLanguage: UnwrapRef<typeof import('../../app/composables/monaco')['guessMonacoLanguage']>
     readonly h: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue')['h']>

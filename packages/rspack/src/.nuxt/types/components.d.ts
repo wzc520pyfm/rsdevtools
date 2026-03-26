@@ -43,6 +43,7 @@ interface _GlobalComponents {
   DisplayHighlightedPath: typeof import("../../app/components/display/HighlightedPath")['default']
   DisplayModuleGraph: typeof import("../../app/components/display/ModuleGraph.vue")['default']
   DisplayModuleId: typeof import("../../app/components/display/ModuleId.vue")['default']
+  DisplayPluginName: typeof import("../../app/components/display/PluginName.vue")['default']
   DisplayTreeNode: typeof import("../../app/components/display/TreeNode.vue")['default']
   FlowmapExpandable: typeof import("../../app/components/flowmap/Expandable.vue")['default']
   FlowmapNode: typeof import("../../app/components/flowmap/Node.vue")['default']
@@ -121,6 +122,7 @@ interface _GlobalComponents {
   LazyDisplayHighlightedPath: LazyComponent<typeof import("../../app/components/display/HighlightedPath")['default']>
   LazyDisplayModuleGraph: LazyComponent<typeof import("../../app/components/display/ModuleGraph.vue")['default']>
   LazyDisplayModuleId: LazyComponent<typeof import("../../app/components/display/ModuleId.vue")['default']>
+  LazyDisplayPluginName: LazyComponent<typeof import("../../app/components/display/PluginName.vue")['default']>
   LazyDisplayTreeNode: LazyComponent<typeof import("../../app/components/display/TreeNode.vue")['default']>
   LazyFlowmapExpandable: LazyComponent<typeof import("../../app/components/flowmap/Expandable.vue")['default']>
   LazyFlowmapNode: LazyComponent<typeof import("../../app/components/flowmap/Node.vue")['default']>

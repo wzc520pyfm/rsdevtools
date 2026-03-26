@@ -108,6 +108,32 @@ export const getFileTypeFromModuleId = makeCachedFunction((moduleId: string): Fi
   return DefaultFileTypeRule
 })
 
+// @unocss-include
+export const PluginTypeRules: FilterMatchRule[] = [
+  {
+    match: /Rspack/i,
+    name: 'rspack',
+    description: 'Rspack',
+    icon: 'i-catppuccin-folder-prisma',
+  },
+]
+
+export const DefaultPluginType: FilterMatchRule = {
+  name: 'plugin',
+  match: /.*/,
+  description: 'User Plugins',
+  icon: 'i-catppuccin-folder-plugins',
+}
+
+export const getPluginTypeFromName = makeCachedFunction((name: string): FilterMatchRule => {
+  for (const rule of PluginTypeRules) {
+    if (rule.match.test(name)) {
+      return rule
+    }
+  }
+  return DefaultPluginType
+})
+
 export function getChunkTypeIcon(entry: boolean, initial: boolean): string {
   if (entry) return 'i-ph-house-duotone text-green-500'
   if (initial) return 'i-ph-flag-duotone text-blue-500'
