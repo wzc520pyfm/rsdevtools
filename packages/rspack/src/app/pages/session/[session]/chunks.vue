@@ -10,6 +10,39 @@ const viewType = useLocalStorage('rspack-chunks-view', 'list')
 const search = ref('')
 const chunkFilter = ref<'all' | 'entry' | 'initial' | 'dynamic'>('all')
 
+const chunkViewTypes = [
+  {
+    label: 'List',
+    value: 'list',
+    icon: 'i-ph-list-bullets-duotone',
+  },
+  {
+    label: 'Detailed List',
+    value: 'detailed',
+    icon: 'i-ph-list-magnifying-glass-duotone',
+  },
+  {
+    label: 'Graph',
+    value: 'graph',
+    icon: 'i-ph-graph-duotone',
+  },
+  {
+    label: 'Treemap',
+    value: 'treemap',
+    icon: 'i-ph-checkerboard-duotone',
+  },
+  {
+    label: 'Sunburst',
+    value: 'sunburst',
+    icon: 'i-ph-chart-donut-duotone',
+  },
+  {
+    label: 'Flamegraph',
+    value: 'flamegraph',
+    icon: 'i-ph-chart-bar-horizontal-duotone',
+  },
+] as const
+
 const chunks = computed(() => session.value?.chunks ?? [])
 
 const filteredChunks = computed(() => {
@@ -50,21 +83,27 @@ function openChunk(chunk: ChunkData) {
           </button>
         </div>
       </template>
-      <div flex="~ gap-1">
+      <div flex="~ gap-2 items-center" border="t base" pt2>
+        <span op50 text-sm>View as</span>
         <button
-          v-for="vt in ['list', 'detailed', 'graph', 'treemap', 'sunburst', 'flamegraph']"
-          :key="vt"
-          btn-action text-sm
-          :class="{ 'btn-action-active': viewType === vt }"
-          @click="viewType = vt"
+          v-for="vt of chunkViewTypes"
+          :key="vt.value"
+          btn-action text-sm flex="~ gap-1 items-center"
+          :class="viewType === vt.value ? 'btn-action-active' : 'grayscale op50'"
+          @click="viewType = vt.value"
         >
-          {{ vt.charAt(0).toUpperCase() + vt.slice(1) }}
+          <div :class="vt.icon" />
+          {{ vt.label }}
         </button>
       </div>
     </DataSearchPanel>
 
     <div v-if="viewType === 'list'">
       <ChunksFlatList :chunks="filteredChunks" @select="openChunk" />
+    </div>
+
+    <div v-else-if="viewType === 'detailed'">
+      <ChunksFlatList :chunks="filteredChunks" detailed @select="openChunk" />
     </div>
 
     <div v-else-if="viewType === 'treemap'">
@@ -81,10 +120,6 @@ function openChunk(chunk: ChunkData) {
 
     <div v-else-if="viewType === 'graph'">
       <ChunksGraph :chunks="filteredChunks" @select="openChunk" />
-    </div>
-
-    <div v-else-if="viewType === 'detailed'">
-      <ChunksFlatList :chunks="filteredChunks" detailed @select="openChunk" />
     </div>
 
     <div v-if="!filteredChunks.length" py8 text-center op50>

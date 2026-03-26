@@ -1,40 +1,61 @@
 <script setup lang="ts">
+import type { ChunkData } from '../../../../shared/types'
 import { formatBytes } from '@rspack-devtools/ui/utils/format'
 
 const props = defineProps<{
-  chunks: any[]
+  chunks: ChunkData[]
   detailed?: boolean
 }>()
 
 const emit = defineEmits<{
-  select: [chunk: any]
+  select: [chunk: ChunkData]
 }>()
 </script>
 
 <template>
-  <div border="~ base" rounded-lg of-hidden>
+  <div flex="~ col gap-2">
     <div
       v-for="chunk in chunks"
       :key="chunk.id"
-      flex="~ col" px3 py2
-      border="b base last:b-0"
+      flex="~ items-center gap-3"
+      border="~ base rounded-lg"
+      px3 py2
       cursor-pointer hover:bg-active
+      font-mono text-sm
       @click="emit('select', chunk)"
     >
-      <div flex="~ gap-3" items-center>
-        <span font-mono text-sm flex-1>
-          {{ chunk.names.length ? chunk.names.join(', ') : `Chunk #${chunk.id}` }}
+      <div i-ph-shapes-duotone flex-none op70 />
+
+      <div flex="~ gap-2 items-center" min-w-0 flex-1>
+        <span truncate>
+          [{{ chunk.names.length ? chunk.names.join(', ') : `chunk_${chunk.id}` }}]
         </span>
-        <div flex="~ gap-2">
-          <DisplayBadge v-if="chunk.entry" text="entry" :color="120" />
-          <DisplayBadge v-if="chunk.initial" text="initial" :color="200" />
+        <DisplayBadge v-if="chunk.entry" text="entry" :color="120" />
+        <DisplayBadge v-if="chunk.initial" text="initial" :color="200" />
+        <DisplayBadge v-if="!chunk.entry && !chunk.initial" text="dynamic" :color="280" />
+      </div>
+
+      <div flex="~ items-center gap-3" flex-none op60>
+        <span font-mono>#{{ chunk.id }}</span>
+        <div flex="~ gap-1 items-center" :title="`${chunk.parents.length} parents`">
+          <div i-ph-file-arrow-up-duotone />
+          {{ chunk.parents.length }}
         </div>
+        <div flex="~ gap-1 items-center" :title="`${chunk.moduleCount} modules`">
+          <div i-ph-package-duotone />
+          {{ chunk.moduleCount }}
+        </div>
+      </div>
+
+      <template v-if="detailed">
+        <div flex="~ col gap-0.5" text-xs op40>
+          <span>{{ chunk.files.length }} files</span>
+          <span>{{ formatBytes(chunk.size) }}</span>
+        </div>
+      </template>
+      <template v-else>
         <DisplayFileSizeBadge :size="chunk.size" />
-      </div>
-      <div v-if="detailed" flex="~ gap-4" mt1 text-xs op40>
-        <span>{{ chunk.moduleCount }} modules</span>
-        <span>{{ chunk.files.length }} files</span>
-      </div>
+      </template>
     </div>
   </div>
 </template>
