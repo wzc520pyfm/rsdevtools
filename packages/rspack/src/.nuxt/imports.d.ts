@@ -34,9 +34,10 @@ export { definePageMeta } from '../../../../node_modules/.pnpm/nuxt@3.21.2_@parc
 export { defineLazyHydrationComponent } from '#app/composables/lazy-hydration';
 export { useChartGraph, ChartGraphOptions } from '../app/composables/chart';
 export { useGraphPathSelector, useGraphPathManager, GraphPathSelector } from '../app/composables/graph-path-selector';
+export { useLogs, markLogsAsRead, LogsState } from '../app/composables/logs';
 export { createLinkHorizontal, createLinkVertical, generateModuleGraphLink, createModuleGraph, useModuleGraph, getModuleGraphLinkColor, useToggleGraphNodeExpanded, useGraphZoom, useGraphDraggingScroll, ModuleGraphNode, ModuleGraphSpacing, ModuleGraphLink } from '../app/composables/module-graph';
 export { getMonaco, applyMonacoTheme, getMonacoWordWrap, createReadOnlyMonacoEditor, setModelLanguageIfNeeded, guessMonacoLanguage, syncMonacoEditorScrolls, setupMonacoScrollSync } from '../app/composables/monaco';
-export { connectionState, useRpc, connect, ServerFunctions, ClientFunctions } from '../app/composables/rpc';
+export { onLogsUpdated, connectionState, useRpc, connect, ServerFunctions, ClientFunctions } from '../app/composables/rpc';
 export { useZoomElement } from '../app/composables/zoom-element';
 export { FixedTupleMap, FixedTupleMap, V, V, TupleMap, TupleMap, V, makeCachedFunction } from '../app/utils/cache';
 export { getPluginColor, getHashColorFromString, getHsla } from '../app/utils/color';

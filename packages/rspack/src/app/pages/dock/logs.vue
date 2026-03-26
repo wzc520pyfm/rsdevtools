@@ -1,30 +1,26 @@
 <script setup lang="ts">
+import type { DevToolsLogEntry } from '@rspack-devtools/kit'
 import { useTimeAgo } from '@vueuse/core'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import FilterToggles from '../../components/logs/FilterToggles.vue'
 import HashBadge from '../../components/logs/HashBadge.vue'
 import LogItem from '../../components/logs/LogItem.vue'
 import { fromEntries, getHashColorFromString, levels } from '../../components/logs/LogItemConstants'
 import type { LogFrom, LogLevel } from '../../components/logs/LogItemConstants'
+import { markLogsAsRead, useLogs } from '../../composables/logs'
 import { useRpc } from '../../composables/rpc'
-
-interface LogEntry {
-  id: string
-  message: string
-  level: LogLevel
-  description?: string
-  from: LogFrom
-  timestamp: number
-  category?: string
-  labels?: string[]
-  status?: 'loading' | 'idle'
-}
 
 function formatAbsoluteTime(ts: number): string {
   return new Date(ts).toLocaleTimeString()
 }
 
 type SortMode = 'newest' | 'oldest' | 'level'
+
+const logsState = useLogs()
+const { call } = useRpc()
+
+const allLevels: LogLevel[] = Object.keys(levels) as LogLevel[]
+const allFroms: LogFrom[] = Object.keys(fromEntries) as LogFrom[]
 
 const sortLabels: Record<SortMode, string> = {
   newest: 'Newest first',
@@ -37,22 +33,20 @@ const sortIcons: Record<SortMode, string> = {
   level: 'i-ph:warning-diamond-duotone',
 }
 
-const { call } = useRpc()
-const logs = ref<LogEntry[]>([])
-const selectedId = ref<string | null>(null)
 const search = ref('')
+const selectedId = ref<string | null>(null)
 const activeFilters = ref<Set<LogLevel>>(new Set())
 const activeLabelFilters = ref<Set<string>>(new Set())
 const activeFromFilters = ref<Set<LogFrom>>(new Set())
 const activeCategories = ref<Set<string>>(new Set())
 const sortBy = ref<SortMode>('newest')
 
-let syncVersion = 0
-let pollTimer: ReturnType<typeof setInterval> | null = null
-
-const allLevels: LogLevel[] = Object.keys(levels) as LogLevel[]
-const allFroms: LogFrom[] = Object.keys(fromEntries) as LogFrom[]
 const sortModes: SortMode[] = ['newest', 'oldest', 'level']
+
+function cycleSortMode() {
+  const idx = sortModes.indexOf(sortBy.value)
+  sortBy.value = sortModes[(idx + 1) % sortModes.length] as SortMode
+}
 
 const levelPriority: Record<LogLevel, number> = {
   error: 0,
@@ -60,11 +54,6 @@ const levelPriority: Record<LogLevel, number> = {
   info: 2,
   success: 3,
   debug: 4,
-}
-
-function cycleSortMode() {
-  const idx = sortModes.indexOf(sortBy.value)
-  sortBy.value = sortModes[(idx + 1) % sortModes.length] as SortMode
 }
 
 function toggleFilter(level: string) {
@@ -116,19 +105,19 @@ function resetFilters() {
 }
 
 const allLabels = computed(() => {
-  const labelSet = new Set<string>()
-  for (const entry of logs.value) {
+  const labels = new Set<string>()
+  for (const entry of logsState.entries) {
     if (entry.labels) {
       for (const label of entry.labels)
-        labelSet.add(label)
+        labels.add(label)
     }
   }
-  return Array.from(labelSet).sort()
+  return Array.from(labels).sort()
 })
 
 const allCategories = computed(() => {
   const cats = new Set<string>()
-  for (const entry of logs.value) {
+  for (const entry of logsState.entries) {
     if (entry.category)
       cats.add(entry.category)
   }
@@ -136,13 +125,13 @@ const allCategories = computed(() => {
 })
 
 const filteredEntries = computed(() => {
-  let entries = logs.value
+  let entries = logsState.entries
   if (activeFilters.value.size > 0)
     entries = entries.filter(e => activeFilters.value.has(e.level))
   if (activeLabelFilters.value.size > 0)
     entries = entries.filter(e => e.labels?.some(l => activeLabelFilters.value.has(l)))
   if (activeFromFilters.value.size > 0)
-    entries = entries.filter(e => activeFromFilters.value.has(e.from))
+    entries = entries.filter(e => activeFromFilters.value.has(e.from as LogFrom))
   if (activeCategories.value.size > 0)
     entries = entries.filter(e => e.category && activeCategories.value.has(e.category))
   if (search.value) {
@@ -166,43 +155,27 @@ const filteredEntries = computed(() => {
 const selectedEntry = computed(() => {
   if (!selectedId.value)
     return null
-  return logs.value.find(e => e.id === selectedId.value) ?? null
+  return logsState.entries.find(e => e.id === selectedId.value) ?? null
 })
 
 const selectedTimeAgo = useTimeAgo(computed(() => selectedEntry.value?.timestamp ?? Date.now()))
 
-async function fetchLogs(since?: number) {
-  try {
-    const result = await call('devtoolskit:internal:logs:list', since)
-    if (since === undefined) {
-      logs.value = result.entries
-    }
-    else {
-      for (const id of result.removedIds) {
-        const idx = logs.value.findIndex(e => e.id === id)
-        if (idx >= 0) logs.value.splice(idx, 1)
-      }
-      for (const entry of result.entries) {
-        const idx = logs.value.findIndex(e => e.id === entry.id)
-        if (idx >= 0) logs.value[idx] = entry
-        else logs.value.push(entry)
-      }
-    }
-    syncVersion = result.version
-  }
-  catch {}
+async function openFile(entry: DevToolsLogEntry) {
+  if (!entry.filePosition)
+    return
+  const { file, line, column } = entry.filePosition
+  await call('rspack:open-in-editor', { path: file, line, column })
 }
 
 async function clearAll() {
   await call('devtoolskit:internal:logs:clear')
-  logs.value = []
   selectedId.value = null
 }
 
 async function removeEntry(id: string) {
   await call('devtoolskit:internal:logs:remove', id)
-  logs.value = logs.value.filter(e => e.id !== id)
-  if (selectedId.value === id) selectedId.value = null
+  if (selectedId.value === id)
+    selectedId.value = null
 }
 
 async function dismissFiltered() {
@@ -213,10 +186,8 @@ async function dismissFiltered() {
 }
 
 onMounted(() => {
-  fetchLogs()
-  pollTimer = setInterval(() => fetchLogs(syncVersion), 2000)
+  markLogsAsRead()
 })
-onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 </script>
 
 <template>
@@ -239,8 +210,8 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
           <div :class="sortIcons[sortBy]" class="w-4 h-4" />
         </button>
         <div class="flex-1" />
-        <span v-if="filteredEntries.length !== logs.length" class="text-xs op40">
-          {{ filteredEntries.length }}/{{ logs.length }}
+        <span v-if="filteredEntries.length !== logsState.entries.length" class="text-xs op40">
+          {{ filteredEntries.length }}/{{ logsState.entries.length }}
         </span>
         <button
           v-if="hasActiveFilter"
@@ -262,7 +233,7 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
           Dismiss filtered
         </button>
         <button
-          v-if="!hasActiveFilter && logs.length > 0"
+          v-if="!hasActiveFilter && logsState.entries.length > 0"
           class="text-xs op50 hover:op100 px-1.5 py-0.5 hover:bg-active rounded transition flex items-center gap-0.5"
           title="Dismiss all logs"
           @click="clearAll"
@@ -365,13 +336,13 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 
         <!-- Metadata row -->
         <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
-          <span class="flex items-center gap-1" :class="levels[selectedEntry.level].color">
-            <div :class="levels[selectedEntry.level].icon" class="w-3.5 h-3.5" />
+          <span class="flex items-center gap-1" :class="levels[selectedEntry.level]?.color">
+            <div :class="levels[selectedEntry.level]?.icon" class="w-3.5 h-3.5" />
             <span class="capitalize">{{ selectedEntry.level }}</span>
           </span>
-          <span v-if="fromEntries[selectedEntry.from]" class="flex items-center gap-1" :class="fromEntries[selectedEntry.from].color">
-            <div :class="fromEntries[selectedEntry.from].icon" class="w-3.5 h-3.5" />
-            {{ fromEntries[selectedEntry.from].label }}
+          <span v-if="fromEntries[selectedEntry.from as LogFrom]" class="flex items-center gap-1" :class="fromEntries[selectedEntry.from as LogFrom]?.color">
+            <div :class="fromEntries[selectedEntry.from as LogFrom]?.icon" class="w-3.5 h-3.5" />
+            {{ fromEntries[selectedEntry.from as LogFrom]?.label }}
           </span>
           <span v-if="selectedEntry.status === 'loading'" class="flex items-center gap-1 text-amber">
             <div class="w-3 h-3 border-1.5 border-current border-t-transparent rounded-full animate-spin" />
@@ -379,6 +350,10 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
           </span>
           <span class="op40" :title="formatAbsoluteTime(selectedEntry.timestamp)">
             {{ selectedTimeAgo }}
+          </span>
+          <span v-if="selectedEntry.notify" class="flex items-center gap-0.5 op40">
+            <div class="i-ph:bell-duotone w-3.5 h-3.5" />
+            notify
           </span>
         </div>
 
@@ -391,6 +366,45 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
         <div v-if="selectedEntry.category || (selectedEntry.labels && selectedEntry.labels.length)" class="flex flex-wrap gap-1 mb-3">
           <HashBadge v-if="selectedEntry.category" :label="selectedEntry.category" />
           <HashBadge v-for="label of selectedEntry.labels" :key="label" :label="label" />
+        </div>
+
+        <!-- File position -->
+        <button
+          v-if="selectedEntry.filePosition"
+          class="flex items-center gap-1.5 text-sm text-blue hover:underline mb-3"
+          @click="openFile(selectedEntry!)"
+        >
+          <div class="i-ph:file-code-duotone w-4 h-4" />
+          <span>{{ selectedEntry.filePosition.file }}<template v-if="selectedEntry.filePosition.line">:{{ selectedEntry.filePosition.line }}</template><template v-if="selectedEntry.filePosition.column">:{{ selectedEntry.filePosition.column }}</template></span>
+        </button>
+
+        <!-- Element position -->
+        <div v-if="selectedEntry.elementPosition" class="text-sm mb-3 bg-gray/5 rounded p-2">
+          <div class="op50 text-xs mb-1">
+            Element
+          </div>
+          <div v-if="selectedEntry.elementPosition.selector" class="font-mono text-xs">
+            {{ selectedEntry.elementPosition.selector }}
+          </div>
+          <div v-if="selectedEntry.elementPosition.description" class="text-xs op70 mt-1">
+            {{ selectedEntry.elementPosition.description }}
+          </div>
+          <div v-if="selectedEntry.elementPosition.boundingBox" class="text-xs op50 mt-1 font-mono">
+            {{ selectedEntry.elementPosition.boundingBox.x }}, {{ selectedEntry.elementPosition.boundingBox.y }}
+            ({{ selectedEntry.elementPosition.boundingBox.width }} × {{ selectedEntry.elementPosition.boundingBox.height }})
+          </div>
+        </div>
+
+        <!-- Timers -->
+        <div v-if="selectedEntry.autoDismiss || selectedEntry.autoDelete" class="flex flex-wrap gap-3 mb-3 text-xs op50">
+          <span v-if="selectedEntry.autoDismiss" class="flex items-center gap-1">
+            <div class="i-ph:bell-slash-duotone w-3.5 h-3.5" />
+            Auto-dismiss: {{ selectedEntry.autoDismiss / 1000 }}s
+          </span>
+          <span v-if="selectedEntry.autoDelete" class="flex items-center gap-1">
+            <div class="i-ph:timer-duotone w-3.5 h-3.5" />
+            Auto-delete: {{ selectedEntry.autoDelete / 1000 }}s
+          </span>
         </div>
 
         <!-- ID + Timestamp -->

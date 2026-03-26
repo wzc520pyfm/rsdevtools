@@ -108,6 +108,7 @@ declare global {
   const loadPayload: typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/payload').loadPayload
   const makeCachedFunction: typeof import('../../app/utils/cache').makeCachedFunction
   const makeDestructurable: typeof import('@vueuse/core').makeDestructurable
+  const markLogsAsRead: typeof import('../../app/composables/logs').markLogsAsRead
   const markRaw: typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue').markRaw
   const navigateTo: typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/router').navigateTo
   const nextTick: typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue').nextTick
@@ -123,6 +124,7 @@ declare global {
   const onElementRemoval: typeof import('@vueuse/core').onElementRemoval
   const onErrorCaptured: typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue').onErrorCaptured
   const onKeyStroke: typeof import('@vueuse/core').onKeyStroke
+  const onLogsUpdated: typeof import('../../app/composables/rpc').onLogsUpdated
   const onLongPress: typeof import('@vueuse/core').onLongPress
   const onMounted: typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue').onMounted
   const onNuxtReady: typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/ready').onNuxtReady
@@ -290,6 +292,7 @@ declare global {
   const useLink: typeof import('../../../../../node_modules/.pnpm/vue-router@4.6.4_vue@3.5.30_typescript@5.9.3_/node_modules/vue-router').useLink
   const useLoadingIndicator: typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/loading-indicator').useLoadingIndicator
   const useLocalStorage: typeof import('@vueuse/core').useLocalStorage
+  const useLogs: typeof import('../../app/composables/logs').useLogs
   const useMagicKeys: typeof import('@vueuse/core').useMagicKeys
   const useManualRefHistory: typeof import('@vueuse/core').useManualRefHistory
   const useMediaControls: typeof import('@vueuse/core').useMediaControls
@@ -468,6 +471,9 @@ declare global {
   export type { GraphPathSelector } from '../../app/composables/graph-path-selector'
   import('../../app/composables/graph-path-selector')
   // @ts-ignore
+  export type { LogsState } from '../../app/composables/logs'
+  import('../../app/composables/logs')
+  // @ts-ignore
   export type { ModuleGraphNode, ModuleGraphSpacing, ModuleGraphLink } from '../../app/composables/module-graph'
   import('../../app/composables/module-graph')
   // @ts-ignore
@@ -591,6 +597,7 @@ declare module 'vue' {
     readonly loadPayload: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/payload')['loadPayload']>
     readonly makeCachedFunction: UnwrapRef<typeof import('../../app/utils/cache')['makeCachedFunction']>
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
+    readonly markLogsAsRead: UnwrapRef<typeof import('../../app/composables/logs')['markLogsAsRead']>
     readonly markRaw: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue')['markRaw']>
     readonly navigateTo: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/router')['navigateTo']>
     readonly nextTick: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue')['nextTick']>
@@ -606,6 +613,7 @@ declare module 'vue' {
     readonly onElementRemoval: UnwrapRef<typeof import('@vueuse/core')['onElementRemoval']>
     readonly onErrorCaptured: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue')['onErrorCaptured']>
     readonly onKeyStroke: UnwrapRef<typeof import('@vueuse/core')['onKeyStroke']>
+    readonly onLogsUpdated: UnwrapRef<typeof import('../../app/composables/rpc')['onLogsUpdated']>
     readonly onLongPress: UnwrapRef<typeof import('@vueuse/core')['onLongPress']>
     readonly onMounted: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/vue@3.5.30_typescript@5.9.3/node_modules/vue')['onMounted']>
     readonly onNuxtReady: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/ready')['onNuxtReady']>
@@ -773,6 +781,7 @@ declare module 'vue' {
     readonly useLink: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/vue-router@4.6.4_vue@3.5.30_typescript@5.9.3_/node_modules/vue-router')['useLink']>
     readonly useLoadingIndicator: UnwrapRef<typeof import('../../../../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@22.19.15_@vue+compiler-sfc@3.5.30_cac@6.7_f9c807d48227f8d295d539446a7f18c8/node_modules/nuxt/dist/app/composables/loading-indicator')['useLoadingIndicator']>
     readonly useLocalStorage: UnwrapRef<typeof import('@vueuse/core')['useLocalStorage']>
+    readonly useLogs: UnwrapRef<typeof import('../../app/composables/logs')['useLogs']>
     readonly useMagicKeys: UnwrapRef<typeof import('@vueuse/core')['useMagicKeys']>
     readonly useManualRefHistory: UnwrapRef<typeof import('@vueuse/core')['useManualRefHistory']>
     readonly useMediaControls: UnwrapRef<typeof import('@vueuse/core')['useMediaControls']>

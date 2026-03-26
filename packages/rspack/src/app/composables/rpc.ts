@@ -43,6 +43,16 @@ export interface ClientFunctions {
 
 const rpcInstance = shallowRef<ReturnType<typeof createBirpc<ServerFunctions, ClientFunctions>> | null>(null)
 
+const logsUpdateListeners: Array<() => void> = []
+
+export function onLogsUpdated(cb: () => void): () => void {
+  logsUpdateListeners.push(cb)
+  return () => {
+    const idx = logsUpdateListeners.indexOf(cb)
+    if (idx >= 0) logsUpdateListeners.splice(idx, 1)
+  }
+}
+
 export const connectionState = reactive({
   connected: false,
   error: null as string | null,
@@ -95,7 +105,9 @@ export function connect() {
       'devtoolskit:internal:docks:updated': () => {},
       'devtoolskit:internal:terminals:updated': () => {},
       'devtoolskit:internal:terminals:stream-chunk': () => {},
-      'devtoolskit:internal:logs:updated': () => {},
+      'devtoolskit:internal:logs:updated': () => {
+        logsUpdateListeners.forEach(cb => cb())
+      },
     },
     {
       post: (data) => {
