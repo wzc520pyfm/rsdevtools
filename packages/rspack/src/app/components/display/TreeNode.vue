@@ -5,22 +5,32 @@ const props = withDefaults(defineProps<{
   node: ModuleTreeNode
   icon?: string
   iconOpen?: string
+  link?: string | boolean
+  linkQueryKey?: string
   padding?: number
   open?: boolean
 }>(), {
   icon: 'i-catppuccin:folder icon-catppuccin',
   iconOpen: 'i-catppuccin:folder-open icon-catppuccin',
   padding: 0,
+  linkQueryKey: 'module',
 })
 
 const emit = defineEmits<{
   (e: 'select', node: ModuleDest): void
 }>()
 
+defineSlots<{
+  extra: (props: { node: ModuleDest }) => any
+}>()
+
 const open = defineModel<boolean>('open', { required: false, default: true })
+const route = useRoute()
 
 function select(node: ModuleDest) {
-  emit('select', node)
+  if (!props.link) {
+    emit('select', node)
+  }
 }
 </script>
 
@@ -46,12 +56,34 @@ function select(node: ModuleDest) {
     <template v-if="open">
       <DisplayTreeNode
         v-for="e of Object.entries(node.children)"
-        :key="e[0]" :node="e[1]"
+        :key="e[0]" :node="e[1]" :link="link"
         :padding="padding + 1"
+        :link-query-key="linkQueryKey"
         @select="select"
-      />
+      >
+        <template #extra="{ node: n }">
+          <slot name="extra" :node="n" />
+        </template>
+      </DisplayTreeNode>
       <template v-for="i of node.items" :key="i.full">
+        <NuxtLink
+          v-if="link"
+          :to="typeof link === 'string' ? link : { query: { ...route.query, [linkQueryKey]: i.full } }"
+          text-sm
+          ws-nowrap
+          flex="~ gap-1"
+          px2 py1 rounded
+          hover="bg-active"
+          :style="{ paddingLeft: `${padding + 2.7}rem` }"
+        >
+          <DisplayFileIcon :filename="i.full" />
+          <div font-mono>
+            <DisplayHighlightedPath :path="i.path.split('/').pop() || ''" />
+            <slot name="extra" :node="i" />
+          </div>
+        </NuxtLink>
         <div
+          v-else
           text-sm
           ws-nowrap
           flex="~ gap-1"
@@ -64,6 +96,7 @@ function select(node: ModuleDest) {
           <DisplayFileIcon :filename="i.full" />
           <div font-mono>
             <DisplayHighlightedPath :path="i.path.split('/').pop() || ''" />
+            <slot name="extra" :node="i" />
           </div>
         </div>
       </template>

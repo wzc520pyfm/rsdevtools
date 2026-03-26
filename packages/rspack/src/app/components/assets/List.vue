@@ -1,28 +1,40 @@
 <script setup lang="ts">
-import { formatBytes } from '@rspack-devtools/ui/utils/format'
+import type { AssetData } from '../../../../shared/types'
 
-const props = defineProps<{
-  assets: any[]
+defineProps<{
+  assets: AssetData[]
 }>()
 
 const emit = defineEmits<{
-  select: [asset: any]
+  select: [asset: AssetData]
 }>()
 </script>
 
 <template>
-  <div border="~ base" rounded-lg of-hidden>
-    <div
-      v-for="asset in assets"
-      :key="asset.name"
-      flex="~ gap-3" items-center px3 py2
-      border="b base last:b-0"
-      cursor-pointer hover:bg-active
-      @click="emit('select', asset)"
+  <div p4>
+    <DataVirtualList
+      :items="assets"
+      key-prop="name"
     >
-      <DisplayFileIcon :filename="asset.name" />
-      <span font-mono text-sm flex-1 truncate>{{ asset.name }}</span>
-      <DisplayFileSizeBadge :size="asset.size" />
-    </div>
+      <template #default="{ item }">
+        <div flex pb2>
+          <div
+            w-full font-mono border="~ rounded base" px2 py1 text-sm hover="bg-active"
+            cursor-pointer
+            @click="emit('select', item)"
+          >
+            <div flex="~ gap-1">
+              <DisplayFileIcon :filename="item.name" />
+              <span overflow-hidden text-ellipsis break-all line-clamp-2>
+                {{ item.name }}
+                <span v-if="item.chunkNames?.length" op50>
+                  ({{ item.chunkNames.join(', ') }})
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </DataVirtualList>
   </div>
 </template>

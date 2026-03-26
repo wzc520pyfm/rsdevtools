@@ -1,33 +1,17 @@
 <script setup lang="ts">
-const props = defineProps<{ assets: any[] }>()
-const emit = defineEmits<{ select: [asset: any] }>()
-const container = ref<HTMLElement>()
+import type { GraphBase, GraphBaseOptions } from 'nanovis'
+import type { AssetChartInfo } from '~/types/chart'
+import { useTemplateRef, watchEffect } from 'vue'
 
-onMounted(() => initChart())
+const props = defineProps<{
+  graph: GraphBase<AssetChartInfo | undefined, GraphBaseOptions<AssetChartInfo | undefined>>
+}>()
 
-async function initChart() {
-  if (!container.value || !props.assets.length) return
-  const { Flamegraph, normalizeTreeNode, createColorGetterSpectrum } = await import('nanovis')
-  const root = normalizeTreeNode({
-    id: 'root',
-    name: 'All Assets',
-    children: props.assets.map(a => ({
-      id: a.name,
-      name: a.name,
-      value: a.size,
-      data: a,
-    })),
-  })
-  const graph = new Flamegraph(root, {
-    getColor: createColorGetterSpectrum(),
-    onClick: (node: any) => {
-      if (node.data?.data) emit('select', node.data.data)
-    },
-  })
-  container.value.appendChild(graph.el)
-}
+const el = useTemplateRef<HTMLDivElement>('el')
+
+watchEffect(() => el.value?.append(props.graph.el))
 </script>
 
 <template>
-  <div ref="container" w-full min-h-300px border="~ base" rounded-lg />
+  <div ref="el" />
 </template>

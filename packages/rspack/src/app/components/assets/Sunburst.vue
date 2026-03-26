@@ -1,33 +1,66 @@
 <script setup lang="ts">
-const props = defineProps<{ assets: any[] }>()
-const emit = defineEmits<{ select: [asset: any] }>()
-const container = ref<HTMLElement>()
+import type { GraphBase, GraphBaseOptions } from 'nanovis'
+import type { AssetChartInfo, AssetChartNode } from '~/types/chart'
+import { colorToCssBackground } from 'nanovis'
+import { useTemplateRef, watchEffect } from 'vue'
 
-onMounted(() => initChart())
+const props = defineProps<{
+  graph: GraphBase<AssetChartInfo | undefined, GraphBaseOptions<AssetChartInfo | undefined>>
+  selected?: AssetChartNode | undefined
+}>()
 
-async function initChart() {
-  if (!container.value || !props.assets.length) return
-  const { Sunburst, normalizeTreeNode, createColorGetterSpectrum } = await import('nanovis')
-  const root = normalizeTreeNode({
-    id: 'root',
-    name: 'All Assets',
-    children: props.assets.map(a => ({
-      id: a.name,
-      name: a.name,
-      value: a.size,
-      data: a,
-    })),
-  })
-  const graph = new Sunburst(root, {
-    getColor: createColorGetterSpectrum(),
-    onClick: (node: any) => {
-      if (node.data?.data) emit('select', node.data.data)
-    },
-  })
-  container.value.appendChild(graph.el)
-}
+const emit = defineEmits<{
+  (e: 'select', node: AssetChartNode | null): void
+}>()
+
+const el = useTemplateRef<HTMLDivElement>('el')
+watchEffect(() => el.value?.append(props.graph.el))
 </script>
 
 <template>
-  <div ref="container" w-full min-h-400px border="~ base" rounded-lg flex items-center justify-center />
+  <div grid="~ cols-[max-content_1fr] gap-2" p4>
+    <div ref="el" w-500px />
+    <div flex="~ col gap-4">
+      <ChartNavBreadcrumb
+        border="b base" py2
+        :selected="selected"
+        :options="graph.options"
+        @select="emit('select', $event)"
+      />
+      <div v-if="selected" grid="~ cols-[250px_1fr] gap-1">
+        <template v-for="child of selected.children" :key="child.id">
+          <button
+            ws-nowrap text-nowrap text-left overflow-hidden text-ellipsis text-sm
+            hover="bg-active" rounded px2
+            @click="emit('select', child)"
+          >
+            <span v-if="child.meta && child.meta === selected?.meta" text-primary>(self)</span>
+            <span v-else>{{ child.id }}</span>
+          </button>
+
+          <button
+            relative flex="~ gap-1 items-center"
+            hover="bg-active" rounded
+            @click="emit('select', child)"
+          >
+            <div
+              h-5 rounded shadow border="~ base"
+              :style="{
+                background: colorToCssBackground(graph.options.getColor?.(child) || '#000'),
+                width: `${child.size / selected.size * 100}%`,
+              }"
+            />
+            <DisplayFileSizeBadge :size="child.size" />
+            <div
+              v-if="child.children.length > 0"
+              :title="`${child.children.length} dependencies`"
+              text-xs op-fade
+            >
+              ({{ child.children.length }})
+            </div>
+          </button>
+        </template>
+      </div>
+    </div>
+  </div>
 </template>

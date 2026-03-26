@@ -1,69 +1,200 @@
 <script setup lang="ts">
 import type { BuildSession, AssetData } from '../../../../shared/types'
+import type { AssetChartInfo, AssetChartNode } from '~/types/chart'
+import { computedWithControl, useMouse } from '@vueuse/core'
 import Fuse from 'fuse.js'
+import { Flamegraph, Sunburst, Treemap } from 'nanovis'
+import { computed, reactive, ref, watch } from 'vue'
+import ChartTreemap from '~/components/chart/Treemap.vue'
+import { useChartGraph } from '~/composables/chart'
+import { settings } from '~/state/settings'
 
 const route = useRoute()
 const router = useRouter()
 const session = inject<Ref<BuildSession | null>>('session')!
 
-const viewType = useLocalStorage('rspack-assets-view', 'list')
+const mouse = reactive(useMouse())
 const search = ref('')
+
+const assetViewTypes = [
+  {
+    label: 'List',
+    value: 'list',
+    icon: 'i-ph-list-duotone',
+  },
+  {
+    label: 'Folder',
+    value: 'folder',
+    icon: 'i-ph-folder-duotone',
+  },
+  {
+    label: 'Treemap',
+    value: 'treemap',
+    icon: 'i-ph-checkerboard-duotone',
+  },
+  {
+    label: 'Sunburst',
+    value: 'sunburst',
+    icon: 'i-ph-chart-donut-duotone',
+  },
+  {
+    label: 'Flamegraph',
+    value: 'flamegraph',
+    icon: 'i-ph-chart-bar-horizontal-duotone',
+  },
+] as const
 
 const assets = computed(() => session.value?.assets ?? [])
 
-const filteredAssets = computed(() => {
+const fuse = computedWithControl(
+  () => assets.value,
+  () => new Fuse(assets.value, {
+    includeScore: true,
+    keys: ['name'],
+    ignoreLocation: true,
+    threshold: 0.4,
+  }),
+)
+
+const searched = computed(() => {
   if (!search.value) return assets.value
-  const fuse = new Fuse(assets.value, { keys: ['name'], threshold: 0.3 })
-  return fuse.search(search.value).map(r => r.item)
+  return fuse.value.search(search.value).map(r => r.item)
 })
+
+function toggleDisplay(type: typeof settings.value.assetViewType) {
+  settings.value.assetViewType = type
+}
 
 function openAsset(asset: AssetData) {
   router.push({ query: { ...route.query, asset: asset.name } })
 }
+
+const { tree, chartOptions, graph, nodeHover, nodeSelected, selectedNode, selectNode, buildGraph } = useChartGraph<AssetData, AssetChartInfo, AssetChartNode>({
+  data: searched,
+  nameKey: 'name',
+  sizeKey: 'size',
+  rootText: 'Project',
+  nodeType: 'file',
+  graphOptions: {
+    onClick(node: any) {
+      if (node)
+        nodeHover.value = node
+      if (node.meta?.type === 'file') {
+        selectedNode.value = node.meta
+        router.replace({ query: { asset: node.meta.name } })
+      }
+    },
+    onHover(node: any) {
+      if (node && !route.query.asset)
+        nodeHover.value = node
+      if (node === null)
+        nodeHover.value = undefined
+    },
+    onLeave() {
+      nodeHover.value = undefined
+    },
+    onSelect(node: any) {
+      nodeSelected.value = node || tree.value.root
+      selectedNode.value = node?.meta
+    },
+  },
+  onUpdate() {
+    switch (settings.value.assetViewType) {
+      case 'sunburst':
+        graph.value = new Sunburst(tree.value.root, chartOptions.value)
+        break
+      case 'treemap':
+        graph.value = new Treemap(tree.value.root, {
+          ...chartOptions.value,
+          selectedPaddingRatio: 0,
+        })
+        break
+      default:
+        graph.value = new Flamegraph(tree.value.root, chartOptions.value)
+    }
+  },
+})
+
+watch(() => settings.value.assetViewType, () => {
+  buildGraph()
+})
 </script>
 
 <template>
-  <div flex="~ col gap-4">
-    <DataSearchPanel v-model:search="search">
-      <div flex="~ gap-1">
-        <button
-          v-for="vt in ['list', 'folder', 'treemap', 'sunburst', 'flamegraph']"
-          :key="vt"
-          btn-action text-sm
-          :class="{ 'btn-action-active': viewType === vt }"
-          @click="viewType = vt"
+  <div relative max-h-screen of-hidden>
+    <div absolute left-4 top-4 z-panel-nav>
+      <DataSearchPanel v-model:search="search">
+        <div flex="~ gap-2 items-center" border="t base" pt2>
+          <span op50 text-sm>View as</span>
+          <button
+            v-for="viewType of assetViewTypes"
+            :key="viewType.value"
+            btn-action text-sm flex="~ gap-1 items-center"
+            :class="settings.assetViewType === viewType.value ? 'btn-action-active' : 'grayscale op50'"
+            @click="toggleDisplay(viewType.value)"
+          >
+            <div :class="viewType.icon" />
+            {{ viewType.label }}
+          </button>
+        </div>
+      </DataSearchPanel>
+    </div>
+
+    <div of-auto h-screen flex="~ col gap-2" pt32>
+      <template v-if="settings.assetViewType === 'list'">
+        <AssetsList v-if="searched?.length" :assets="searched" @select="openAsset" />
+        <div
+          absolute bottom-4 py-1 px-2 bg-glass left="1/2" translate-x="-1/2" border="~ base rounded-full" text="center xs"
         >
-          {{ vt.charAt(0).toUpperCase() + vt.slice(1) }}
-        </button>
+          <span op50>{{ searched.length }} of {{ assets.length }}</span>
+        </div>
+      </template>
+
+      <template v-else-if="settings.assetViewType === 'folder'">
+        <AssetsFolder v-if="searched?.length" :assets="searched" @select="openAsset" />
+      </template>
+
+      <template v-else-if="settings.assetViewType === 'treemap'">
+        <ChartTreemap
+          v-if="graph" :graph="graph"
+          :selected="nodeSelected"
+          @select="(x: any) => selectNode(x)"
+        >
+          <template #default="{ selected, options, onSelect }">
+            <ChartNavBreadcrumb
+              border="b base" py2 min-h-10
+              :selected="selected"
+              :options="options"
+              @select="onSelect"
+            />
+          </template>
+        </ChartTreemap>
+      </template>
+
+      <template v-else-if="settings.assetViewType === 'sunburst'">
+        <AssetsSunburst
+          v-if="graph" :graph="graph"
+          :selected="nodeSelected"
+          @select="(x: any) => selectNode(x)"
+        />
+      </template>
+
+      <template v-else-if="settings.assetViewType === 'flamegraph'">
+        <AssetsFlamegraph
+          v-if="graph" :graph="graph"
+        />
+      </template>
+    </div>
+
+    <DisplayGraphHoverView :visible="!!nodeHover?.meta" :x="mouse.x" :y="mouse.y">
+      <div flex="~ col gap-2">
+        <div flex="~ gap-1 items-center">
+          {{ (nodeHover as any)?.text }}
+        </div>
+        <div flex="~ gap-1 items-center">
+          <DisplayFileSizeBadge :size="(nodeHover as any)?.size ?? 0" />
+        </div>
       </div>
-    </DataSearchPanel>
-
-    <div v-if="viewType === 'list'">
-      <AssetsList :assets="filteredAssets" @select="openAsset" />
-    </div>
-
-    <div v-else-if="viewType === 'folder'">
-      <AssetsFolder :assets="filteredAssets" @select="openAsset" />
-    </div>
-
-    <div v-else-if="viewType === 'treemap'">
-      <ChartTreemap :data="filteredAssets" name-key="name" size-key="size" @select="openAsset" />
-    </div>
-
-    <div v-else-if="viewType === 'sunburst'">
-      <AssetsSunburst :assets="filteredAssets" @select="openAsset" />
-    </div>
-
-    <div v-else-if="viewType === 'flamegraph'">
-      <AssetsFlamegraph :assets="filteredAssets" @select="openAsset" />
-    </div>
-
-    <div v-if="!filteredAssets.length" py8 text-center op50>
-      No assets match the current filter
-    </div>
-
-    <div text-xs op30 text-right>
-      {{ filteredAssets.length }} of {{ assets.length }} assets
-    </div>
+    </DisplayGraphHoverView>
   </div>
 </template>
