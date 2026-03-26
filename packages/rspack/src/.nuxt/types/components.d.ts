@@ -40,6 +40,7 @@ interface _GlobalComponents {
   DisplayFileIcon: typeof import("../../app/components/display/FileIcon.vue")['default']
   DisplayFileSizeBadge: typeof import("../../app/components/display/FileSizeBadge.vue")['default']
   DisplayGraphHoverView: typeof import("../../app/components/display/GraphHoverView.vue")['default']
+  DisplayHighlightedPackageName: typeof import("../../app/components/display/HighlightedPackageName")['default']
   DisplayHighlightedPath: typeof import("../../app/components/display/HighlightedPath")['default']
   DisplayModuleGraph: typeof import("../../app/components/display/ModuleGraph.vue")['default']
   DisplayModuleId: typeof import("../../app/components/display/ModuleId.vue")['default']
@@ -119,6 +120,7 @@ interface _GlobalComponents {
   LazyDisplayFileIcon: LazyComponent<typeof import("../../app/components/display/FileIcon.vue")['default']>
   LazyDisplayFileSizeBadge: LazyComponent<typeof import("../../app/components/display/FileSizeBadge.vue")['default']>
   LazyDisplayGraphHoverView: LazyComponent<typeof import("../../app/components/display/GraphHoverView.vue")['default']>
+  LazyDisplayHighlightedPackageName: LazyComponent<typeof import("../../app/components/display/HighlightedPackageName")['default']>
   LazyDisplayHighlightedPath: LazyComponent<typeof import("../../app/components/display/HighlightedPath")['default']>
   LazyDisplayModuleGraph: LazyComponent<typeof import("../../app/components/display/ModuleGraph.vue")['default']>
   LazyDisplayModuleId: LazyComponent<typeof import("../../app/components/display/ModuleId.vue")['default']>

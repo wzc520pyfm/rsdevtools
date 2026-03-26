@@ -10,6 +10,8 @@ export interface ClientSettings {
   wordWrap: boolean
   moduleGraphViewType: 'list' | 'detailed-list' | 'graph' | 'folder'
   assetViewType: 'list' | 'folder' | 'treemap' | 'sunburst' | 'flamegraph'
+  packageViewType: 'table' | 'treemap' | 'duplicate-packages'
+  packageSizeSortType: string
 }
 
 export const settings = useLocalStorage<ClientSettings>('rspack-devtools-settings', {
@@ -19,6 +21,8 @@ export const settings = useLocalStorage<ClientSettings>('rspack-devtools-setting
   wordWrap: false,
   moduleGraphViewType: 'list',
   assetViewType: 'list',
+  packageViewType: 'table',
+  packageSizeSortType: '',
 }, {
   mergeDefaults: true,
 })

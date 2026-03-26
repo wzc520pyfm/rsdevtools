@@ -1,37 +1,36 @@
 <script setup lang="ts">
-import { formatBytes } from '@rspack-devtools/ui/utils/format'
+import type { BuildSession, PackageData } from '../../../../shared/types'
+import { computed } from 'vue'
 
 const props = defineProps<{
-  packages: any[]
+  packages: PackageData[]
+  session: BuildSession | null
 }>()
 
 const emit = defineEmits<{
-  select: [pkg: any]
+  select: [pkg: PackageData]
 }>()
+
+const duplicatePackages = computed(() => props.packages.filter(p => p.isDuplicate))
+
+const groupedDuplicatePackages = computed(() =>
+  duplicatePackages.value.reduce((acc, p) => {
+    acc[p.name] = [...(acc[p.name] || []), p]
+    return acc
+  }, {} as Record<string, PackageData[]>))
 </script>
 
 <template>
-  <div v-if="!packages.length" py8 text-center op50>
-    No duplicate packages found
-  </div>
-  <div v-else flex="~ col gap-2">
-    <div
-      v-for="pkg in packages"
-      :key="pkg.name"
-      border="~ base" rounded-lg p3
-      cursor-pointer hover:bg-active
-      @click="emit('select', pkg)"
-    >
-      <div flex="~ gap-3" items-center>
-        <span font-mono text-sm>{{ pkg.name }}</span>
-        <DisplayBadge text="duplicate" :color="0" />
-      </div>
-      <div mt1 text-xs op50>
-        {{ pkg.instances.length }} instances, {{ formatBytes(pkg.size) }} total
-      </div>
-      <div mt1 flex="~ gap-2 wrap">
-        <DisplayBadge v-for="inst in pkg.instances" :key="inst.path" :text="inst.version" />
+  <template v-if="Object.keys(groupedDuplicatePackages).length">
+    <div v-for="(pkgs, name) of groupedDuplicatePackages" :key="name">
+      <PackagesTable :packages="pkgs" :session="session" group-view disable-size-sort @select="emit('select', $event)" />
+    </div>
+  </template>
+  <template v-else>
+    <div p4>
+      <div w-full h-48 flex="~ items-center justify-center" op50 italic>
+        No duplicate packages
       </div>
     </div>
-  </div>
+  </template>
 </template>
