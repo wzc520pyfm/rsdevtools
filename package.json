@@ -9,6 +9,7 @@
     "build:rspack": "pnpm --filter @rspack-devtools/rspack build",
     "build:self-inspect": "pnpm --filter @rspack-devtools/self-inspect build",
     "build:core": "pnpm --filter @rspack-devtools/core build",
+    "build:rsdevtools": "pnpm --filter rsdevtools build",
     "dev:rspack": "pnpm --filter @rspack-devtools/rspack dev",
     "example:build": "pnpm --filter rspack-devtools-example build",
     "playground": "pnpm --filter rspack-devtools-playground dev",
