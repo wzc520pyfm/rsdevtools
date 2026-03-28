@@ -16,7 +16,7 @@
     "playground:build": "pnpm --filter rspack-devtools-playground build",
     "changeset": "changeset",
     "version:packages": "changeset version",
-    "release": "pnpm build && changeset publish",
+    "release": "bash scripts/release.sh",
     "release:dry": "pnpm build && changeset publish --dry-run"
   },
   "devDependencies": {
