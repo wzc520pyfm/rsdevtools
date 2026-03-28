@@ -12,7 +12,12 @@
   },
   "homepage": "https://github.com/wzc520pyfm/rsdevtools/tree/main/packages/rspack#readme",
   "bugs": "https://github.com/wzc520pyfm/rsdevtools/issues",
-  "keywords": ["rspack", "devtools", "build-analysis", "ui"],
+  "keywords": [
+    "rspack",
+    "devtools",
+    "build-analysis",
+    "ui"
+  ],
   "sideEffects": false,
   "exports": {
     ".": "./dist/index.mjs",

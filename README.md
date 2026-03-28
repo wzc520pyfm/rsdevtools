@@ -42,7 +42,7 @@ When `Launcher` / `ctx.terminals.run()` starts a **nested** dev process that als
 ### 1. Install
 
 ```bash
-pnpm add -D @rspack-devtools/core
+pnpm add -D rsdevtools
 ```
 
 ### 2. Configure
@@ -51,7 +51,7 @@ Add `RspackDevToolsPlugin` to your rspack config:
 
 ```js
 // rspack.config.mjs
-import { RspackDevToolsPlugin } from '@rspack-devtools/core'
+import { RspackDevToolsPlugin } from 'rsdevtools'
 
 export default {
   // ... your config
