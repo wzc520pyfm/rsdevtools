@@ -4,6 +4,15 @@
   "type": "module",
   "description": "DevTools Kit for Rspack - API for building DevTools integrations",
   "license": "MIT",
+  "author": "wzc520pyfm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wzc520pyfm/rsdevtools",
+    "directory": "packages/kit"
+  },
+  "homepage": "https://github.com/wzc520pyfm/rsdevtools/tree/main/packages/kit#readme",
+  "bugs": "https://github.com/wzc520pyfm/rsdevtools/issues",
+  "keywords": ["rspack", "devtools", "kit", "api"],
   "exports": {
     ".": {
       "import": "./dist/index.js",

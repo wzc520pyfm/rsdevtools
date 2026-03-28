@@ -4,6 +4,15 @@
   "type": "module",
   "description": "DevTools for Rspack - Core plugin and server",
   "license": "MIT",
+  "author": "wzc520pyfm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wzc520pyfm/rsdevtools",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/wzc520pyfm/rsdevtools/tree/main/packages/core#readme",
+  "bugs": "https://github.com/wzc520pyfm/rsdevtools/issues",
+  "keywords": ["rspack", "devtools", "plugin", "rspack-plugin"],
   "exports": {
     ".": {
       "import": "./dist/index.js",

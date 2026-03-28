@@ -13,7 +13,7 @@ Thank you for your interest in contributing to Rspack DevTools!
 
 ```bash
 # Clone the repository
-git clone https://github.com/user/rspack-devtools.git
+git clone https://github.com/wzc520pyfm/rsdevtools.git
 cd rspack-devtools
 
 # Install dependencies

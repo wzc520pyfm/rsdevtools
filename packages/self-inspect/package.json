@@ -4,6 +4,15 @@
   "type": "module",
   "description": "DevTools for inspecting the DevTools itself",
   "license": "MIT",
+  "author": "wzc520pyfm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wzc520pyfm/rsdevtools",
+    "directory": "packages/self-inspect"
+  },
+  "homepage": "https://github.com/wzc520pyfm/rsdevtools/tree/main/packages/self-inspect#readme",
+  "bugs": "https://github.com/wzc520pyfm/rsdevtools/issues",
+  "keywords": ["rspack", "devtools", "inspector"],
   "sideEffects": false,
   "exports": {
     ".": {
