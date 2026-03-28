@@ -9,7 +9,7 @@ export default defineConfig({
     'src/presets/ws/client.ts',
     'src/presets/ws/server.ts',
   ],
-  format: ['esm'],
+  format: ['esm', 'cjs'],
   dts: true,
   clean: true,
   external: ['ws'],

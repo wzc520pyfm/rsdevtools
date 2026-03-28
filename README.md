@@ -50,8 +50,11 @@ pnpm add -D rsdevtools
 Add `RspackDevToolsPlugin` to your rspack config:
 
 ```js
-// rspack.config.mjs
+// rspack.config.mjs (ESM)
 import { RspackDevToolsPlugin } from 'rsdevtools'
+
+// rspack.config.js (CJS)
+const { RspackDevToolsPlugin } = require('rsdevtools')
 
 export default {
   // ... your config

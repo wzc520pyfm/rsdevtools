@@ -8,7 +8,7 @@ export default defineConfig({
     'src/utils/nanoid.ts',
     'src/constants.ts',
   ],
-  format: ['esm'],
+  format: ['esm', 'cjs'],
   dts: true,
   clean: true,
   external: ['@rspack/core'],
