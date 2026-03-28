@@ -176,6 +176,7 @@ export async function startDevToolsServer(
 
     for (const pluginHandler of pluginStaticHandlers) {
       if (url.startsWith(pluginHandler.baseUrl)) {
+        res.setHeader('Access-Control-Allow-Origin', '*')
         const originalUrl = req.url
         req.url = url.slice(pluginHandler.baseUrl.length) || '/'
         pluginHandler.handler(req, res, () => {

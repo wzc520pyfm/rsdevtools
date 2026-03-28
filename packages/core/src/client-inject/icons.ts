@@ -22,6 +22,7 @@ const builtinIcons: Record<string, IconRenderer> = {
   'ph:code-duotone': s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   'ph:house-duotone': s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M3 12l9-8 9 8v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8z" fill="currentColor" opacity="0.7"/></svg>`,
   'ph:rocket-launch-duotone': s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z" fill="currentColor" opacity="0.3"/><path d="M12 13l-3-3" stroke="currentColor" stroke-width="1.5"/><path d="M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  'ph:pencil-simple-duotone': s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`,
 }
 
 export function renderIcon(iconName: string, size: number = 20, assetBaseUrl?: string): string {

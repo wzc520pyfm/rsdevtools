@@ -83,6 +83,27 @@ export default {
         iframeIconAfterLaunch: 'ph:globe-duotone',
       },
     }),
+    {
+      name: 'playground-custom-dock',
+      apply() {},
+      devtools: {
+        async setup(ctx) {
+          ctx.views.hostStatic(
+            '/.devtools-playground/',
+            join(__dirname, 'src/devtools-client-scripts'),
+          )
+          ctx.docks.register({
+            type: 'custom-render',
+            renderer: {
+              importFrom: '/.devtools-playground/custom-render.mjs',
+            },
+            id: 'custom-render',
+            title: 'Custom',
+            icon: 'ph:pencil-simple-duotone',
+          })
+        },
+      },
+    },
   ],
   resolve: {
     extensions: ['.js', '.jsx', '.json'],

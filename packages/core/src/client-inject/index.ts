@@ -806,6 +806,9 @@ function init() {
       }
       setupFn(ctx)
       ctx.current.events.emit('entry:activated')
+      if (dock.type === 'custom-render') {
+        ctx.current.events.emit('dom:panel:mounted', panelCustom)
+      }
     }).catch((err: any) => { console.warn(`[DevTools] Failed to load client script for ${key}`, err) })
   }
 
