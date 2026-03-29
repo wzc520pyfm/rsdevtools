@@ -26,19 +26,34 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 echo -e "${GREEN}✔ Working directory is clean${NC}"
 
-# 3. Install dependencies
+# 3. Version bump (consume changesets → update versions + CHANGELOG)
+echo ""
+echo -e "${YELLOW}▸ Updating versions...${NC}"
+pnpm changeset version
+echo -e "${GREEN}✔ Versions updated${NC}"
+
+# 4. Install dependencies (lockfile may change after version bump)
 echo ""
 echo -e "${YELLOW}▸ Installing dependencies...${NC}"
 pnpm install --no-frozen-lockfile
 echo -e "${GREEN}✔ Dependencies installed${NC}"
 
-# 4. Build all packages
+# 5. Commit version bump
+if [ -n "$(git status --porcelain)" ]; then
+  echo ""
+  echo -e "${YELLOW}▸ Committing version changes...${NC}"
+  git add .
+  git commit -m "chore: release packages"
+  echo -e "${GREEN}✔ Version changes committed${NC}"
+fi
+
+# 6. Build all packages
 echo ""
 echo -e "${YELLOW}▸ Building all packages...${NC}"
 pnpm build
 echo -e "${GREEN}✔ Build complete${NC}"
 
-# 5. Publish
+# 7. Publish
 echo ""
 echo -e "${YELLOW}▸ Publishing packages...${NC}"
 pnpm changeset publish
@@ -47,10 +62,10 @@ echo ""
 echo -e "${GREEN}✔ All packages published successfully!${NC}"
 echo ""
 
-# 7. Push git tags
-echo -e "${YELLOW}▸ Pushing git tags...${NC}"
+# 8. Push commits and tags
+echo -e "${YELLOW}▸ Pushing to remote...${NC}"
 git push --follow-tags
-echo -e "${GREEN}✔ Tags pushed${NC}"
+echo -e "${GREEN}✔ Pushed${NC}"
 
 echo ""
 echo -e "${GREEN}🎉 Release complete!${NC}"
