@@ -1,5 +1,5 @@
 import { rspack } from '@rspack/core'
-import { RspackDevToolsPlugin } from '@rspack-devtools/core'
+import { RspackDevToolsPlugin } from 'rsdevtools'
 
 /** @type {import('@rspack/cli').Configuration} */
 export default {
@@ -11,7 +11,7 @@ export default {
     clean: true,
   },
   devServer: {
-    port: 3200,
+    port: 3202,
     historyApiFallback: true,
   },
   module: {

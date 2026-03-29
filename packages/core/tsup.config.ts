@@ -6,6 +6,8 @@ export default defineConfig([
     format: ['esm', 'cjs'],
     dts: true,
     clean: true,
+    /** CJS needs shims for `import.meta.url` / `createRequire(import.meta.url)` in server & plugin */
+    shims: true,
     external: [
       '@rspack/core',
       '@rspack-devtools/kit',

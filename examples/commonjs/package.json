@@ -1,0 +1,21 @@
+{
+  "name": "rspack-devtools-example-commonjs",
+  "private": true,
+  "scripts": {
+    "build": "rspack build",
+    "dev": "rspack serve"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lodash-es": "^4.17.21",
+    "dayjs": "^1.11.13",
+    "clsx": "^2.1.1",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@rspack/cli": "^1.3.0",
+    "@rspack/core": "^1.3.0",
+    "rsdevtools": "workspace:*"
+  }
+}

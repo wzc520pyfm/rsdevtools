@@ -89,7 +89,7 @@ lsof -ti:7821 | xargs kill -9 2>/dev/null
 ## Development Workflow Issues
 
 ### Changes to core not reflected
-**Fix**: Core uses `tsup` for building. After editing `packages/core/src/`, always run `pnpm build:core` before restarting the example.
+**Fix**: Core uses `tsup` for building. After editing `packages/core/src/`, always run `pnpm build:core` before restarting an example under `examples/`.
 
 ### Client UI changes not reflected
 **Fix**: If running `pnpm dev:client`, Vite HMR should handle it. For production build, run `pnpm build:client` and restart.

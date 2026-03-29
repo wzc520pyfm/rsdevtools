@@ -1,7 +1,7 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { rspack } from '@rspack/core'
-import { RspackDevTools } from '@rspack-devtools/core'
+import { RspackDevTools } from 'rsdevtools'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const nestedReactRoot = join(__dirname, 'nested-react-app')

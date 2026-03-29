@@ -1,6 +1,7 @@
 {
-  "name": "rspack-devtools-example",
+  "name": "rspack-devtools-example-rspack2",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "rspack build",
     "dev": "rspack serve"
@@ -14,8 +15,8 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@rspack/cli": "^1.3.0",
-    "@rspack/core": "^1.3.0",
-    "@rspack-devtools/core": "workspace:*"
+    "@rspack/cli": "2.0.0-beta.9",
+    "@rspack/core": "2.0.0-beta.9",
+    "rsdevtools": "workspace:*"
   }
 }

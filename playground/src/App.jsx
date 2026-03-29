@@ -85,7 +85,7 @@ export function App() {
 
         <div className="card">
           <h3>Installation</h3>
-          <pre className="code-block">{`import { RspackDevTools } from '@rspack-devtools/core'
+          <pre className="code-block">{`import { RspackDevTools } from 'rsdevtools'
 
 export default {
   plugins: [

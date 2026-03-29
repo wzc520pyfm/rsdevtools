@@ -11,7 +11,7 @@
     "build:core": "pnpm --filter @rspack-devtools/core build",
     "build:rsdevtools": "pnpm --filter rsdevtools build",
     "dev:rspack": "pnpm --filter @rspack-devtools/rspack dev",
-    "example:build": "pnpm --filter rspack-devtools-example build",
+    "examples:build": "pnpm -r --filter './examples/*' build",
     "playground": "pnpm --filter rspack-devtools-playground dev",
     "playground:build": "pnpm --filter rspack-devtools-playground build",
     "changeset": "changeset",

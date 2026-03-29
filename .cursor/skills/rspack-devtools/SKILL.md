@@ -6,7 +6,7 @@ description: >
   code, adding features, fixing bugs, creating playground demos, launcher +
   Terminals + dock iframe behavior, or aligning functionality with
   vite-devtools. Applies to files under rs-devtools/ packages/core, packages/rspack,
-  packages/kit, playground/, or example/.
+  packages/kit, playground/, or examples/.
 ---
 
 # Rspack DevTools Development
@@ -67,7 +67,7 @@ rs-devtools/
 │   ├── nested-react-app/    # Second Rspack dev (e.g. port 9301) — launched from Terminals via launcher
 │   ├── index.html           # Loads devtools-inject.js (often proxied from :7821)
 │   └── src/                 # Simple React app
-├── example/                 # Full example (React + Rspack)
+├── examples/                # Sample apps (esm, commonjs, rspack2)
 │   ├── rspack.config.mjs    # Uses RspackDevToolsPlugin + HtmlRspackPlugin
 │   ├── index.html           # Loads devtools-inject.js from DevTools server
 │   └── src/
@@ -225,7 +225,7 @@ Two playground setups are available:
 ### `playground/` — Minimal (function-style API)
 Demonstrates the `RspackDevTools()` function-style factory, consistent with vite-devtools' `DevTools()` API. Includes **`nested-react-app/`** (workspace package): a **second** Rspack dev server without DevTools, started from the **Launcher** into **Terminals** (`pnpm exec rspack serve`, cwd = nested app). **`openUrlAfterLaunch`** in `rspack.config.mjs` controls what the **dock iframe** shows after launch (e.g. external **rspack.rs**, or **`/__rdt_nested__/`** + host **`devServer.proxy`** for same-origin local embed). `index.html` typically loads **`/devtools-inject.js`** via a devServer middleware that proxies the script from the DevTools port (**7821**).
 
-### `example/` — Full (class-style API)
+### `examples/esm/` — Full (class-style API)
 React app with hash-based routing:
 
 | Route | Page | Purpose |
@@ -248,8 +248,8 @@ pnpm build:client
 # Run playground (minimal, function-style API)
 pnpm playground
 
-# Or run the full example
-cd example && npx rspack serve
+# Or run an example
+cd examples/esm && npx rspack serve
 ```
 
 The DevTools server starts automatically via the plugin on first compilation.

@@ -103,7 +103,7 @@ rs-devtools/
 │   ├── rpc/           # @rspack-devtools/rpc - RPC layer
 │   └── self-inspect/  # @rspack-devtools/self-inspect - Self-inspection panel
 ├── playground/        # Dev playground (Rspack app with DevTools enabled)
-└── example/           # Minimal example project
+└── examples/          # Sample apps (ESM, CommonJS, Rspack 2.x beta)
 ```
 
 ### Core Plugin (`@rspack-devtools/core`)

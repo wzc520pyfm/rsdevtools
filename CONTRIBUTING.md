@@ -32,8 +32,8 @@ pnpm --filter @rspack-devtools/core dev
 # Development mode for client UI
 pnpm --filter @rspack-devtools/client dev
 
-# Build & test with example project
-cd example && pnpm build
+# Build & test with example projects
+pnpm examples:build
 ```
 
 ## Project Structure
@@ -59,7 +59,7 @@ rs-devtools/
 │       │   ├── App.vue        # Root component
 │       │   └── main.ts        # App entry with router
 │       └── uno.config.ts      # UnoCSS configuration
-└── example/            # Demo Rspack project
+└── examples/           # Demo Rspack projects (esm, commonjs, rspack2)
 ```
 
 ## Making Changes
