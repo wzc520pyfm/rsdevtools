@@ -1,6 +1,6 @@
 {
   "name": "@rspack-devtools/core",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "DevTools for Rspack - Core plugin and server",
   "license": "MIT",
@@ -12,7 +12,12 @@
   },
   "homepage": "https://github.com/wzc520pyfm/rsdevtools/tree/main/packages/core#readme",
   "bugs": "https://github.com/wzc520pyfm/rsdevtools/issues",
-  "keywords": ["rspack", "devtools", "plugin", "rspack-plugin"],
+  "keywords": [
+    "rspack",
+    "devtools",
+    "plugin",
+    "rspack-plugin"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

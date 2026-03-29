@@ -1,6 +1,6 @@
 {
   "name": "@rspack-devtools/rpc",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "DevTools RPC Layer for Rspack",
   "license": "MIT",
@@ -12,7 +12,12 @@
   },
   "homepage": "https://github.com/wzc520pyfm/rsdevtools/tree/main/packages/rpc#readme",
   "bugs": "https://github.com/wzc520pyfm/rsdevtools/issues",
-  "keywords": ["rspack", "devtools", "rpc", "birpc"],
+  "keywords": [
+    "rspack",
+    "devtools",
+    "rpc",
+    "birpc"
+  ],
   "sideEffects": false,
   "exports": {
     ".": {

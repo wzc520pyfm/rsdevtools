@@ -1,6 +1,6 @@
 {
   "name": "rsdevtools",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "DevTools for Rspack - Enhance your Rspack DX",
   "license": "MIT",
@@ -12,7 +12,13 @@
   },
   "homepage": "https://github.com/wzc520pyfm/rsdevtools#readme",
   "bugs": "https://github.com/wzc520pyfm/rsdevtools/issues",
-  "keywords": ["rspack", "devtools", "rspack-plugin", "dx", "developer-tools"],
+  "keywords": [
+    "rspack",
+    "devtools",
+    "rspack-plugin",
+    "dx",
+    "developer-tools"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
