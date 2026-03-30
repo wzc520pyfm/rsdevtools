@@ -1,0 +1,59 @@
+const { rspack } = require('@rspack/core')
+const { RspackDevToolsPlugin } = require('rsdevtools')
+
+/** @type {import('@rspack/cli').Configuration} */
+const config = {
+  entry: {
+    main: './src/index.jsx',
+  },
+  devServer: {
+    port: 3203,
+    historyApiFallback: true,
+  },
+  resolve: {
+    extensions: ['...', '.ts', '.tsx', '.jsx'],
+  },
+  module: {
+    rules: [
+      {
+        test: /\.css$/,
+        type: 'css',
+      },
+      {
+        test: /\.jsx$/,
+        use: {
+          loader: 'builtin:swc-loader',
+          options: {
+            jsc: {
+              parser: {
+                syntax: 'ecmascript',
+                jsx: true,
+              },
+              externalHelpers: true,
+              preserveAllComments: false,
+              transform: {
+                react: {
+                  runtime: 'automatic',
+                  throwIfNamespace: true,
+                  useBuiltins: false,
+                },
+              },
+            },
+          },
+        },
+        type: 'javascript/auto',
+      },
+      {
+        test: /\.(png|svg|jpg)$/,
+        type: 'asset/resource',
+      },
+    ],
+  },
+  plugins: [
+    new rspack.HtmlRspackPlugin({
+      template: './index.html',
+    }),
+    new RspackDevToolsPlugin(),
+  ],
+}
+module.exports = config
