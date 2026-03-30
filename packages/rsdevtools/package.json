@@ -1,6 +1,6 @@
 {
   "name": "rsdevtools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "DevTools for Rspack - Enhance your Rspack DX",
   "license": "MIT",

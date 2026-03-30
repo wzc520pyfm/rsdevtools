@@ -1,5 +1,13 @@
 # rsdevtools
 
+## 0.1.1
+
+### Patch Changes
+
+- 4841fb2: Fix CJS crash where `fileURLToPath` received `undefined` from the `import.meta.url` shim (e.g. WASI/sandbox). Resolve module directory and `createRequire` via `__filename` when available.
+- Updated dependencies [4841fb2]
+  - @rspack-devtools/core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes
