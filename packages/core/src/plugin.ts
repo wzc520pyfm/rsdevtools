@@ -11,6 +11,10 @@ import { DevToolsRsdoctorUI } from './rsdoctor-adapter'
 
 const _require = createRequire(import.meta.url)
 
+function generateInjectSnippet(host: string, port: number): string {
+  return `<script>(function l(){var s=document.createElement('script');s.src='http://${host}:${port}/devtools-inject.js';s.onerror=function(){setTimeout(l,2000)};document.body.appendChild(s)})()</script>`
+}
+
 export class RspackDevToolsPlugin {
   private options: RspackDevToolsOptions
   private collector: DataCollector
@@ -24,8 +28,24 @@ export class RspackDevToolsPlugin {
   apply(compiler: Compiler) {
     let server: DevToolsServer | null = null
     let context: DevToolsNodeContext | null = null
+    const host = this.options.host ?? 'localhost'
+    const port = this.options.port ?? 7821
 
     this.collector.setCwd(compiler.options.context ?? process.cwd())
+
+    // Auto-inject devtools client script into HTML (like Vite DevTools' transformIndexHtml)
+    compiler.hooks.compilation.tap('RspackDevToolsPlugin', (compilation) => {
+      const HtmlPlugin = compiler.webpack?.HtmlRspackPlugin
+        ?? (_require('@rspack/core') as any).HtmlRspackPlugin
+      if (!HtmlPlugin?.getCompilationHooks) return
+      const hooks = HtmlPlugin.getCompilationHooks(compilation)
+      hooks.beforeEmit.tap('RspackDevToolsPlugin', (data: any) => {
+        if (data.html && typeof data.html === 'string') {
+          data.html = data.html.replace('</body>', `${generateInjectSnippet(host, port)}</body>`)
+        }
+        return data
+      })
+    })
 
     if (this.options.rsdoctor !== false) {
       try {
@@ -112,7 +132,7 @@ export class RspackDevToolsPlugin {
           })
 
           server = await startDevToolsServer(context, this.options)
-          const url = `http://${this.options.host ?? 'localhost'}:${server.port}`
+          const url = `http://${host}:${server.port}`
 
           console.log()
           console.log(`  \x1B[36m\x1B[1m⬢ Rspack DevTools\x1B[0m`)

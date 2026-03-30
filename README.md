@@ -25,7 +25,7 @@ A comprehensive set of developer tools for visualizing and analyzing your Rspack
 
 ### Cross-cutting
 - **Session Compare**: Select two build sessions to compare metrics side-by-side (duration, bundle size, module count, etc.)
-- **Embedded Mode (Dock)**: Inject DevTools as a floating panel in your application via `</body>` script injection
+- **Embedded Mode (Dock)**: Floating DevTools panel auto-injected into your HTML by the plugin (no manual script tags needed)
 - **Real-time Updates**: WebSocket-based RPC with automatic reconnection; build completion notifications push to the UI
 
 ### Debug logging (aligned with Vite DevTools)

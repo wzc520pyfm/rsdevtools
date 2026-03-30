@@ -7,13 +7,5 @@
 </head>
 <body>
   <div id="root"></div>
-  <script>
-    (function loadDevTools() {
-      var s = document.createElement('script');
-      s.src = 'http://localhost:7821/devtools-inject.js';
-      s.onerror = function() { setTimeout(loadDevTools, 2000); };
-      document.body.appendChild(s);
-    })();
-  </script>
 </body>
 </html>
