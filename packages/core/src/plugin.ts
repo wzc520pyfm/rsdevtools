@@ -3,13 +3,18 @@ import type { DevToolsNodeContext } from '@rspack-devtools/kit'
 import type { RspackDevToolsOptions } from './types'
 import type { DevToolsServer } from './server'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { DevToolsRspackUI, DataCollector } from '@rspack-devtools/rspack'
 import { DevToolsSelfInspect } from '@rspack-devtools/self-inspect'
 import { createDevToolsContext } from './context'
 import { startDevToolsServer } from './server'
 import { DevToolsRsdoctorUI } from './rsdoctor-adapter'
 
-const _require = createRequire(import.meta.url)
+declare const __filename: string | undefined
+
+const _require = createRequire(
+  typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url),
+)
 
 function generateInjectSnippet(host: string, port: number): string {
   return `<script>(function l(){var s=document.createElement('script');s.src='http://${host}:${port}/devtools-inject.js';s.onerror=function(){setTimeout(l,2000)};document.body.appendChild(s)})()</script>`

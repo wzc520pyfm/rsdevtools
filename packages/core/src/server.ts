@@ -6,7 +6,6 @@ import type { ConnectionMeta, RspackDevToolsOptions } from './types'
 import { createServer } from 'node:http'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { createBirpc } from 'birpc'
 import { getPort } from 'get-port-please'
 import sirv from 'sirv'
@@ -17,15 +16,14 @@ import { debugRpcInvoked } from './debug-rspack'
 import { getInjectClientScript, serializeDocks } from './inject'
 import { RpcFunctionsHost } from './hosts/rpc-host'
 import { DevToolsViewHost } from './hosts/view-host'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+import { moduleDirname } from './module-dir'
 
 function resolveClientDir(optionsClientDir?: string): string {
   if (optionsClientDir) return optionsClientDir
 
   if (existsSync(rspackClientDir)) return rspackClientDir
 
-  return path.resolve(__dirname, '../client')
+  return path.resolve(moduleDirname, '../client')
 }
 
 function renderClientImportsMap(context: DevToolsNodeContext): string {

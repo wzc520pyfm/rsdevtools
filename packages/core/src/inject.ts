@@ -1,16 +1,14 @@
 import type { DevToolsDockUserEntry } from '@rspack-devtools/kit'
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import type { InjectConfig, SerializedDock } from './client-inject/types'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
+import { moduleDirname } from './module-dir'
 
 let _bundleCache: string | undefined
 
 function getClientBundle(): string {
   if (!_bundleCache) {
-    const bundlePath = join(__dirname, 'client-inject.global.js')
+    const bundlePath = join(moduleDirname, 'client-inject.global.js')
     try {
       _bundleCache = readFileSync(bundlePath, 'utf-8')
     }
