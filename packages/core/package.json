@@ -1,6 +1,6 @@
 {
   "name": "@rspack-devtools/core",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "type": "module",
   "description": "DevTools for Rspack - Core plugin and server",
   "license": "MIT",

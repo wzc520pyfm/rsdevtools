@@ -1,5 +1,11 @@
 # @rspack-devtools/core
 
+## 0.1.0
+
+### Minor Changes
+
+- Auto-inject devtools dock script into HTML via HtmlRspackPlugin hook. Users no longer need to manually add script tags to their index.html.
+
 ## 0.0.2
 
 ### Patch Changes
