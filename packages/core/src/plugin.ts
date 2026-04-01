@@ -139,15 +139,17 @@ export class RspackDevToolsPlugin {
           server = await startDevToolsServer(context, this.options)
           const url = `http://${host}:${server.port}`
 
-          console.log()
-          console.log(`  \x1B[36m\x1B[1m⬢ Rspack DevTools\x1B[0m`)
-          console.log(`  \x1B[2m├─\x1B[0m Local:    \x1B[36m${url}\x1B[0m`)
-          console.log(`  \x1B[2m├─\x1B[0m Session:  \x1B[33m${session.id}\x1B[0m`)
-          console.log(`  \x1B[2m├─\x1B[0m Modules:  \x1B[32m${session.modules.length}\x1B[0m  Chunks: \x1B[32m${session.chunks.length}\x1B[0m  Assets: \x1B[32m${session.assets.length}\x1B[0m`)
-          console.log(`  \x1B[2m├─\x1B[0m Plugins:  \x1B[32m${session.plugins.length}\x1B[0m  Packages: \x1B[32m${session.packages.length}\x1B[0m`)
-          console.log(`  \x1B[2m├─\x1B[0m Docks:    \x1B[32m${context.docks.values({ includeBuiltin: false }).length}\x1B[0m registered`)
-          console.log(`  \x1B[2m└─\x1B[0m Duration: \x1B[32m${session.duration}ms\x1B[0m`)
-          console.log()
+          if (this.options.print) {
+            console.log()
+            console.log(`  \x1B[36m\x1B[1m⬢ Rspack DevTools\x1B[0m`)
+            console.log(`  \x1B[2m├─\x1B[0m Local:    \x1B[36m${url}\x1B[0m`)
+            console.log(`  \x1B[2m├─\x1B[0m Session:  \x1B[33m${session.id}\x1B[0m`)
+            console.log(`  \x1B[2m├─\x1B[0m Modules:  \x1B[32m${session.modules.length}\x1B[0m  Chunks: \x1B[32m${session.chunks.length}\x1B[0m  Assets: \x1B[32m${session.assets.length}\x1B[0m`)
+            console.log(`  \x1B[2m├─\x1B[0m Plugins:  \x1B[32m${session.plugins.length}\x1B[0m  Packages: \x1B[32m${session.packages.length}\x1B[0m`)
+            console.log(`  \x1B[2m├─\x1B[0m Docks:    \x1B[32m${context.docks.values({ includeBuiltin: false }).length}\x1B[0m registered`)
+            console.log(`  \x1B[2m└─\x1B[0m Duration: \x1B[32m${session.duration}ms\x1B[0m`)
+            console.log()
+          }
 
           if (this.options.open) {
             const { exec } = await import('node:child_process')

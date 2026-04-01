@@ -56,6 +56,11 @@ export interface RspackDevToolsOptions {
   open?: boolean
   clientDir?: string
   /**
+   * Print the DevTools server URL and build summary banner to the terminal.
+   * @default false
+   */
+  print?: boolean
+  /**
    * Whether to register built-in DevTools panels (Build Analysis, File Explorer, Terminal, Self Inspect).
    * Set to `false` if you only want third-party plugin docks.
    * @default true
