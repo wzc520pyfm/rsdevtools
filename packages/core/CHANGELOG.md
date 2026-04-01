@@ -1,5 +1,11 @@
 # @rspack-devtools/core
 
+## 0.1.2
+
+### Patch Changes
+
+- e3fda0d: Suppress DevTools terminal banner by default; add `print` option to opt in
+
 ## 0.1.1
 
 ### Patch Changes
