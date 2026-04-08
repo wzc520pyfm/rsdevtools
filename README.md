@@ -48,6 +48,10 @@ Try it on StackBlitz: [Rspack + React + DevTools](https://stackblitz.com/edit/gi
 
 > **Note**: The DevTools dock overlay is skipped inside iframes (`window.parent !== window`). In StackBlitz, click **"Open in New Tab"** in the preview panel to see the floating DevTools dock. Also, StackBlitz may auto-preview the DevTools server (port 7821) instead of the app — switch the preview port to **3203** in the Ports panel to see the application.
 
+<p align="center">
+  <img src="docs/stackblitz-tip.png" alt="StackBlitz: Open in New Tab and preview port 3203" width="800" />
+</p>
+
 ## Quick Start
 
 ### 1. Install
