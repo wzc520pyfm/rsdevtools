@@ -5,25 +5,30 @@ A comprehensive set of developer tools for visualizing and analyzing your Rspack
 ## Features
 
 ### Analysis
+
 - **Build Overview**: Build duration, module/chunk/asset/plugin/package counts, total output size, entrypoints, duplicate package warnings
 - **Module Inspector**: Browse all modules with search, group filtering (node_modules, styles, components, etc.), sorting, and detailed side panel with Info/Deps/Code tabs
 - **Module Graph**: Interactive D3 force-directed graph of module dependencies, color-coded by type with zoom/pan/drag
 - **Plugins**: View all registered Rspack plugins with search
 
 ### Build Output
+
 - **Chunk Viewer**: List and Treemap views with entry/initial/dynamic filters, expandable details including origins, parents, and children
 - **Asset Browser**: List, Folder, and Treemap views with size visualization, detail panel showing related chunks and modules
 - **Packages**: Analyze node_modules dependencies with Table/Treemap/Duplicates views, direct/transitive filtering, duplicate package detection
 
 ### Diagnostics
+
 - **Errors & Warnings**: Organized view with Errors/Warnings tabs, open-in-editor support
 
 ### Tools
+
 - **Terminal Host**: Built-in terminal to run commands directly from the DevTools UI
 - **Open in Editor**: Click to open any module or file in your code editor
 - **Open in Finder**: Reveal files in the system file manager
 
 ### Cross-cutting
+
 - **Session Compare**: Select two build sessions to compare metrics side-by-side (duration, bundle size, module count, etc.)
 - **Embedded Mode (Dock)**: Floating DevTools panel auto-injected into your HTML by the plugin (no manual script tags needed)
 - **Real-time Updates**: WebSocket-based RPC with automatic reconnection; build completion notifications push to the UI
@@ -36,6 +41,12 @@ Rspack DevTools uses [`obug`](https://github.com/unjs/obug) with the `DEBUG` env
 - **Enable**: `DEBUG=rspack:devtools:*` (or narrow, e.g. `DEBUG=rspack:devtools:rpc:*`)
 
 When `Launcher` / `ctx.terminals.run()` starts a **nested** dev process that also loads DevTools and inherits `DEBUG`, verbose logs will appear in the **Terminals** panel (same idea as nested `vite dev` under Vite DevTools).
+
+## Online Demo
+
+Try it on StackBlitz: [Rspack + React + DevTools](https://stackblitz.com/edit/github-zwyjqgft)
+
+> **Note**: The DevTools dock overlay is skipped inside iframes (`window.parent !== window`). In StackBlitz, click **"Open in New Tab"** in the preview panel to see the floating DevTools dock. Also, StackBlitz may auto-preview the DevTools server (port 7821) instead of the app — switch the preview port to **3203** in the Ports panel to see the application.
 
 ## Quick Start
 
@@ -125,28 +136,30 @@ rs-devtools/
 
 ## RPC Methods
 
-| Method | Description |
-|--------|-------------|
-| `rspack:list-sessions` | List all build sessions |
-| `rspack:get-session` | Get full session data |
-| `rspack:get-modules` | Get all modules for a session |
-| `rspack:get-module-info` | Get detailed info for a module |
-| `rspack:get-chunks` | Get all chunks |
-| `rspack:get-chunk-info` | Get detailed chunk info |
-| `rspack:get-assets` | Get all assets |
-| `rspack:get-asset-details` | Get asset details with related modules |
-| `rspack:get-entrypoints` | Get entrypoints |
-| `rspack:get-plugins` | Get registered plugins |
-| `rspack:get-packages` | Get analyzed packages from node_modules |
-| `rspack:get-package-details` | Get package details with instances |
-| `rspack:get-module-graph` | Get module dependency graph (nodes + edges) |
-| `rspack:compare-sessions` | Compare two sessions' metrics |
-| `rspack:get-errors` | Get build errors |
-| `rspack:get-warnings` | Get build warnings |
-| `rspack:open-in-editor` | Open file in editor |
-| `rspack:open-in-finder` | Reveal file in finder |
-| `rspack:get-terminals` | List terminal sessions |
-| `rspack:run-terminal` | Run a command in a new terminal |
+
+| Method                       | Description                                 |
+| ---------------------------- | ------------------------------------------- |
+| `rspack:list-sessions`       | List all build sessions                     |
+| `rspack:get-session`         | Get full session data                       |
+| `rspack:get-modules`         | Get all modules for a session               |
+| `rspack:get-module-info`     | Get detailed info for a module              |
+| `rspack:get-chunks`          | Get all chunks                              |
+| `rspack:get-chunk-info`      | Get detailed chunk info                     |
+| `rspack:get-assets`          | Get all assets                              |
+| `rspack:get-asset-details`   | Get asset details with related modules      |
+| `rspack:get-entrypoints`     | Get entrypoints                             |
+| `rspack:get-plugins`         | Get registered plugins                      |
+| `rspack:get-packages`        | Get analyzed packages from node_modules     |
+| `rspack:get-package-details` | Get package details with instances          |
+| `rspack:get-module-graph`    | Get module dependency graph (nodes + edges) |
+| `rspack:compare-sessions`    | Compare two sessions' metrics               |
+| `rspack:get-errors`          | Get build errors                            |
+| `rspack:get-warnings`        | Get build warnings                          |
+| `rspack:open-in-editor`      | Open file in editor                         |
+| `rspack:open-in-finder`      | Reveal file in finder                       |
+| `rspack:get-terminals`       | List terminal sessions                      |
+| `rspack:run-terminal`        | Run a command in a new terminal             |
+
 
 ## Development
 
@@ -177,13 +190,15 @@ Open `http://localhost:9300` and you'll see the floating dock bar on the left ed
 
 ### Development Workflow
 
-| What you're changing | Command | Where to verify |
-|---|---|---|
-| Dock inject logic (`packages/core/src/client-inject/`) | `pnpm build:core`, then refresh `localhost:9300` | Floating dock bar on `localhost:9300` |
-| Core server/plugin (`packages/core/src/`) | `pnpm build:core`, then restart `pnpm playground` | `localhost:9300` + `localhost:7821` |
-| DevTools UI (`packages/rspack/`) | `pnpm dev:rspack` (watch mode) | Refresh the DevTools panel or `localhost:7821` |
-| RPC layer (`packages/rpc/`) | `pnpm build:rpc`, then rebuild dependent packages | — |
-| Kit (`packages/kit/`) | `pnpm build:kit`, then rebuild dependent packages | — |
+
+| What you're changing                                   | Command                                           | Where to verify                                |
+| ------------------------------------------------------ | ------------------------------------------------- | ---------------------------------------------- |
+| Dock inject logic (`packages/core/src/client-inject/`) | `pnpm build:core`, then refresh `localhost:9300`  | Floating dock bar on `localhost:9300`          |
+| Core server/plugin (`packages/core/src/`)              | `pnpm build:core`, then restart `pnpm playground` | `localhost:9300` + `localhost:7821`            |
+| DevTools UI (`packages/rspack/`)                       | `pnpm dev:rspack` (watch mode)                    | Refresh the DevTools panel or `localhost:7821` |
+| RPC layer (`packages/rpc/`)                            | `pnpm build:rpc`, then rebuild dependent packages | —                                              |
+| Kit (`packages/kit/`)                                  | `pnpm build:kit`, then rebuild dependent packages | —                                              |
+
 
 ### Package Build Commands
 
@@ -198,29 +213,33 @@ pnpm dev:rspack          # Watch mode for the DevTools UI
 
 ## Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `port` | `number` | `7821` | Port for the DevTools server |
-| `host` | `string` | `'localhost'` | Host for the DevTools server |
-| `open` | `boolean` | `false` | Auto-open browser after build |
-| `clientDir` | `string` | built-in | Path to custom client dist directory |
+
+| Option      | Type      | Default       | Description                          |
+| ----------- | --------- | ------------- | ------------------------------------ |
+| `port`      | `number`  | `7821`        | Port for the DevTools server         |
+| `host`      | `string`  | `'localhost'` | Host for the DevTools server         |
+| `open`      | `boolean` | `false`       | Auto-open browser after build        |
+| `clientDir` | `string`  | built-in      | Path to custom client dist directory |
+
 
 ## Comparison with Vite DevTools
 
-| Feature | Vite DevTools | Rspack DevTools |
-|---------|--------------|-----------------|
-| Plugin system | Vite plugin with `devtools.setup` | Rspack plugin with `compiler.hooks.done` |
-| RPC | birpc over WebSocket | birpc over WebSocket |
-| UI framework | Vue-based SPA | Vue 3 SPA |
-| Data source | Rolldown build events/logs | Rspack Stats API |
-| Module graph | D3 visualization | D3 force-directed graph |
-| Dock system | Multi-panel dock UI | Embedded iframe dock + standalone |
-| Plugins page | Plugin list with hooks | Plugin list with search |
-| Packages page | node_modules analysis | Package analysis with duplicate detection |
-| Session compare | Side-by-side comparison | 11-metric comparison view |
-| Terminal | Built-in terminal | Built-in terminal host |
-| Open in editor | Launch editor | Launch editor + finder |
-| Treemap views | Chunks/Assets treemap | Chunks/Assets/Packages treemap |
+
+| Feature         | Vite DevTools                     | Rspack DevTools                           |
+| --------------- | --------------------------------- | ----------------------------------------- |
+| Plugin system   | Vite plugin with `devtools.setup` | Rspack plugin with `compiler.hooks.done`  |
+| RPC             | birpc over WebSocket              | birpc over WebSocket                      |
+| UI framework    | Vue-based SPA                     | Vue 3 SPA                                 |
+| Data source     | Rolldown build events/logs        | Rspack Stats API                          |
+| Module graph    | D3 visualization                  | D3 force-directed graph                   |
+| Dock system     | Multi-panel dock UI               | Embedded iframe dock + standalone         |
+| Plugins page    | Plugin list with hooks            | Plugin list with search                   |
+| Packages page   | node_modules analysis             | Package analysis with duplicate detection |
+| Session compare | Side-by-side comparison           | 11-metric comparison view                 |
+| Terminal        | Built-in terminal                 | Built-in terminal host                    |
+| Open in editor  | Launch editor                     | Launch editor + finder                    |
+| Treemap views   | Chunks/Assets treemap             | Chunks/Assets/Packages treemap            |
+
 
 ## License
 
